@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Download, Upload } from "lucide-react";
 import { ApiKeyGate } from "@/components/ApiKeyGate";
 import { PageHeader } from "@/components/PageHeader";
 import { BrandBrainForm } from "@/components/BrandBrainForm";
+import { BrainVersionHistory } from "@/components/BrainVersionHistory";
 import { listBrains, softDeleteBrain, restoreBrain, getBrain, exportBrain, importBrain } from "@/lib/storage";
 import { showUndoToast } from "@/components/UndoToast";
 import { type BrandBrain } from "@/lib/brand-brain";
@@ -92,6 +93,20 @@ function BrandInner() {
           }
         />
         <BrandBrainForm initial={editing} />
+        <section className="mt-6 border border-base-600 bg-base-900/40 p-5 space-y-3">
+          <h2 className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-muted">
+            version history
+          </h2>
+          <BrainVersionHistory
+            brainId={editing.id}
+            onRestored={(b) => {
+              // Re-seed the form with the restored data so the user sees the
+              // result immediately rather than having to navigate away and back.
+              setEditing(b);
+              refresh();
+            }}
+          />
+        </section>
       </div>
     );
   }

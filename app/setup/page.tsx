@@ -12,7 +12,7 @@ import {
   setActiveBrainId, setOnboarded, markTourSeen, addUsage,
 } from "@/lib/settings";
 import { PROVIDERS, type Provider } from "@/lib/providers";
-import { testApiKey, llmCall, estimateCostUsd } from "@/lib/llm";
+import { verifyApiKey, llmCall, estimateCostUsd } from "@/lib/llm";
 import { emptyBrandBrain, type BrandBrain } from "@/lib/brand-brain";
 import { saveBrain } from "@/lib/storage";
 import { ingestUrl } from "@/lib/url-ingest";
@@ -47,9 +47,13 @@ export default function SetupPage() {
     setError(null);
     if (!apiKey.trim()) { setError("Paste your API key first."); return; }
     setTesting(true);
-    const ok = await testApiKey(apiKey, provider.id);
+    const res = await verifyApiKey(apiKey, provider.id);
     setTesting(false);
-    if (!ok) { setError(`Couldn't authenticate with ${provider.name}. Double-check the key.`); return; }
+    // Only an actual auth failure blocks onboarding. A 429 (rate-limited) or a
+    // provider outage still means the key is good — stopping there would tell a
+    // new user their valid key was rejected on their very first screen.
+    if (!res.authenticated) { setError(res.message); return; }
+    if (!res.ok) setError(res.message); // advisory; we continue
     setActiveProviderId(provider.id);
     setProviderKey(provider.id, apiKey);
     setActiveModelId(provider.id, model || provider.default_model);
@@ -109,10 +113,23 @@ export default function SetupPage() {
   function finish() {
     setOnboarded();
     markTourSeen();
-    // If a brand was created, jump straight to AI suggestions for it.
-    // Otherwise land on dashboard.
-    const dest = brandUrl.trim() || brandName.trim() ? "/suggestions" : "/";
+    // ApiKeyGate bounces here with ?next=<the tool the user actually wanted>.
+    // Honour it so onboarding returns them to that page instead of dropping
+    // them on the dashboard and making them navigate again.
+    const dest = safeReturnPath() ?? (brandUrl.trim() || brandName.trim() ? "/suggestions" : "/");
     router.push(dest);
+  }
+
+  /** Read ?next= and accept it only if it's a same-origin absolute path.
+   *  Rejecting "//evil.com" and "https://…" keeps this from being an open
+   *  redirect. */
+  function safeReturnPath(): string | null {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (!raw) return null;
+    if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+    if (raw.startsWith("/setup")) return null; // don't loop back into onboarding
+    return raw;
   }
 
   return (

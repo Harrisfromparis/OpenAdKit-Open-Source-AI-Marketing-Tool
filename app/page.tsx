@@ -184,7 +184,9 @@ export default function Dashboard() {
                   <span className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">
                     {a.campaign_type}
                   </span>
-                  <span className="text-[10px] font-mono text-ink-subtle tabular">${a.cost_usd.toFixed(4)}</span>
+                  <span className="text-[10px] font-mono text-ink-subtle tabular">
+                    ${(Number.isFinite(Number(a.cost_usd)) ? Number(a.cost_usd) : 0).toFixed(4)}
+                  </span>
                   <span className="text-[10px] font-mono text-ink-subtle">
                     {new Date(a.created_at).toLocaleDateString()}
                   </span>

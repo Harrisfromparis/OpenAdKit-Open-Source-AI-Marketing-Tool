@@ -125,13 +125,17 @@ export function Sidebar() {
       className={cn(
         // Frosted dark sidebar — slightly translucent over the gradient page bg
         "hidden md:flex w-[280px] shrink-0 flex-col",
+        // Full height of the shell + clip: the brand block and footer stay
+        // pinned while only <nav> scrolls. Without `overflow-hidden` a long nav
+        // would stretch the aside past the viewport instead of scrolling.
+        "h-full overflow-hidden",
         "border-r border-base-700/60 bg-base-950/85 backdrop-blur-xl",
         // subtle inner edge highlight for depth
         "shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]"
       )}
     >
-      {/* Brand block */}
-      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-base-700/60">
+      {/* Brand block — shrink-0 so it can't be squeezed when nav is tall */}
+      <div className="shrink-0 flex items-center gap-2.5 px-4 py-5 border-b border-base-700/60">
         <Link href="/" className="flex items-center gap-2.5 group" aria-label="OpenAdKit dashboard">
           <div className="relative h-9 w-9 grid place-items-center">
             <div className="absolute inset-0 bg-live rounded-sm" />
@@ -155,7 +159,7 @@ export function Sidebar() {
       {/* Active-client block — persistent reminder of which brain every tool
           below this point will use. Click to quick-switch between saved clients;
           no client yet → CTA into the onboarding flow. */}
-      <div data-brand-switcher className="border-b border-base-700/60 px-3 py-3 relative">
+      <div data-brand-switcher className="shrink-0 border-b border-base-700/60 px-3 py-3 relative">
         {activeBrand ? (
           <>
             <button
@@ -256,8 +260,10 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1 sidebar-nav">
+      {/* Nav — the sidebar's scroll region. min-h-0 is required: a flex child
+          defaults to min-height:auto, which refuses to shrink below its content
+          and would push the footer off-screen instead of scrolling. */}
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-3 px-2 space-y-1 sidebar-nav">
         {NAV_GROUPS.map((g) => {
           const isOpen = !!open[g.title];
           const Icon = GROUP_ICONS[g.title];
@@ -308,10 +314,20 @@ export function Sidebar() {
                 id={`navgroup-${g.title.replace(/[^a-z0-9]+/gi, "-")}`}
                 role="region"
                 aria-label={g.title}
+                // `invisible` (visibility:hidden) on top of the max-height
+                // collapse, because max-h-0 + overflow-hidden only CLIPS the
+                // links — it doesn't remove them from the tab order or the
+                // accessibility tree. With every group collapsed by default
+                // that left ~80 unreachable-but-focusable links: a keyboard
+                // user tabbing off the last group header fell into a long run
+                // of invisible stops, and a screen reader announced the entire
+                // nav regardless of what was open. visibility:hidden fixes both
+                // and still animates.
                 className={cn(
                   "overflow-hidden transition-[max-height,opacity] duration-200 ease-out",
-                  isOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
+                  isOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0 invisible"
                 )}
+                aria-hidden={!isOpen}
               >
                 <div className="mt-0.5 mb-1 space-y-px">
                   {g.items.map((item, itemIdx) => {
@@ -357,8 +373,8 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer · privacy badge */}
-      <div className="border-t border-base-700/60 px-4 py-3 flex items-center gap-2 text-[10px] font-mono uppercase tracking-ui-wide text-ink-muted">
+      {/* Footer · privacy badge — shrink-0 keeps it pinned to the bottom */}
+      <div className="shrink-0 border-t border-base-700/60 px-4 py-3 flex items-center gap-2 text-[10px] font-mono uppercase tracking-ui-wide text-ink-muted">
         <Lock size={11} className="text-pos shrink-0" />
         <div className="leading-tight">
           <div className="text-ink">zero backend · zero telemetry</div>

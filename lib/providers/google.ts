@@ -1,4 +1,4 @@
-import { LLMError, type LLMCallOptions, type LLMResult, type LLMUsage, type Provider, type StreamHandlers } from "./types";
+import { LLMError, SSE_EVENT_DELIMITER, classifyKeyCheckError, type KeyCheckResult, type LLMCallOptions, type LLMResult, type LLMUsage, type Provider, type StreamHandlers } from "./types";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -29,27 +29,36 @@ function toGeminiBody(opts: LLMCallOptions) {
 }
 
 async function readError(res: Response): Promise<LLMError> {
+  // Read the body ONCE — we need it both for the retry delay and for the
+  // message, and Response bodies can only be consumed a single time.
+  let body: any = null;
+  try {
+    body = await res.clone().json();
+  } catch {
+    /* non-JSON error body */
+  }
+
   // 429 retry tracking: Gemini puts retryDelay in error.details[].retryDelay
   // (e.g. "15.66s"). We also accept the Retry-After header as a fallback.
+  let retryPrefix = "";
   if (res.status === 429) {
+    const details: any[] = body?.error?.details ?? [];
+    const retryInfo = details.find((d) => typeof d?.retryDelay === "string");
+    const delayStr = retryInfo?.retryDelay ?? res.headers.get("retry-after") ?? "60s";
+    const seconds = parseFloat(String(delayStr).replace(/s$/, "")) || 60;
+    // Surface the wait to the USER, not just to the quota tracker. Gemini was
+    // the only provider that recorded the retry delay internally and then threw
+    // it away — so a rate-limited Gemini user saw a bare quota message with no
+    // indication of how long to wait, while Anthropic/OpenAI users got one.
+    retryPrefix = `Rate limit — retry in ${Math.ceil(seconds)}s. `;
     try {
-      const cloned = res.clone();
-      const body = await cloned.json();
-      // Find the RetryInfo entry in the details array
-      const details: any[] = body?.error?.details ?? [];
-      const retryInfo = details.find((d) => typeof d?.retryDelay === "string");
-      const delayStr = retryInfo?.retryDelay ?? res.headers.get("retry-after") ?? "60s";
-      const seconds = parseFloat(String(delayStr).replace(/s$/, "")) || 60;
       const { recordRateLimitHit } = await import("../quota-tracker");
       recordRateLimitHit("google", seconds);
     } catch {}
   }
-  try {
-    const body = await res.json();
-    return new LLMError(body?.error?.message ?? res.statusText, res.status, "google");
-  } catch {
-    return new LLMError(res.statusText, res.status, "google");
-  }
+
+  const detail = body?.error?.message ?? res.statusText;
+  return new LLMError(retryPrefix + detail, res.status, "google");
 }
 
 function usageFrom(body: any): LLMUsage | null {
@@ -99,10 +108,16 @@ async function stream(opts: LLMCallOptions, handlers: StreamHandlers): Promise<L
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split("\n\n");
+      // Gemini terminates SSE events with CRLF CRLF, not LF LF. Splitting on
+      // "\n\n" therefore NEVER matched: every chunk stayed in the buffer, no
+      // event was ever parsed, and the stream produced zero deltas — so every
+      // Gemini generation came back empty and then failed schema validation.
+      // (The old "Gemini occasionally returns empty text" comment elsewhere in
+      // the codebase was this bug, misdiagnosed as intermittent.)
+      const events = buffer.split(SSE_EVENT_DELIMITER);
       buffer = events.pop() ?? "";
       for (const ev of events) {
-        const dataLines = ev.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, ""));
+        const dataLines = ev.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, ""));
         for (const raw of dataLines) {
           const line = raw.trim();
           if (!line || line === "[DONE]") continue;
@@ -147,33 +162,41 @@ async function stream(opts: LLMCallOptions, handlers: StreamHandlers): Promise<L
   return { text: full, usage, modelId: opts.model };
 }
 
-async function testKey(apiKey: string): Promise<boolean> {
+const TEST_MODEL = "gemini-3.5-flash-lite";
+async function testKey(apiKey: string): Promise<KeyCheckResult> {
   try {
     await call({
       apiKey,
-      model: "gemini-2.5-flash",
+      model: TEST_MODEL,
       messages: [{ role: "user", content: "ping" }],
       maxTokens: 4,
     });
-    return true;
-  } catch {
-    return false;
+    return { ok: true, authenticated: true, modelId: TEST_MODEL, message: "Verified — key works." };
+  } catch (e) {
+    return classifyKeyCheckError(e, "Google Gemini", TEST_MODEL);
   }
 }
 
+// Catalog verified against ai.google.dev/gemini-api/docs/pricing on 2026-08-01.
+// The app previously shipped Gemini 2.5 as "recommended" and 2.0 Flash Lite as
+// "cheapest" — two generations behind, and 2.0 Flash Lite had been withdrawn
+// from the API entirely, so selecting it produced a 404 on every call.
 export const google: Provider = {
   id: "google",
   name: "Google Gemini",
   category: "freemium",
-  description: "Strong at multimodal + long-context. Generous free tier on Gemini 2.5 Flash.",
-  free_note: "Free tier (AI Studio key): ~15 RPM on Gemini 2.5 Flash; ~5 RPM on Pro. Plenty for most users.",
+  description: "Strong at multimodal + long-context. Generous free tier across the Gemini 3 family.",
+  free_note: "Free tier (AI Studio key): rate-limited but genuinely usable on the Flash + Flash-Lite models.",
   get_key_url: "https://aistudio.google.com/app/apikey",
-  default_model: "gemini-2.5-flash",
+  default_model: "gemini-3.6-flash",
   supports_vision: true,
   models: [
-    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash — recommended (free tier)", pricing: { input_per_million_usd: 0.3, output_per_million_usd: 2.5 }, best_for: "Default — strong on free tier", supports_vision: true },
-    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro — strongest", pricing: { input_per_million_usd: 1.25, output_per_million_usd: 10 }, best_for: "Long-context teardowns, complex reasoning", supports_vision: true },
-    { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite — cheapest", pricing: { input_per_million_usd: 0.075, output_per_million_usd: 0.3 }, supports_vision: true },
+    { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash — recommended (free tier)", pricing: { input_per_million_usd: 1.5, output_per_million_usd: 7.5 }, context_k: 1000, best_for: "Default — newest Flash, free tier", supports_vision: true },
+    { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash-Lite — cheapest (free tier)", pricing: { input_per_million_usd: 0.3, output_per_million_usd: 2.5 }, best_for: "High-volume hashtags / subject lines", supports_vision: true },
+    { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash", pricing: { input_per_million_usd: 1.5, output_per_million_usd: 9 }, supports_vision: true },
+    { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash-Lite — budget", pricing: { input_per_million_usd: 0.25, output_per_million_usd: 1.5 }, supports_vision: true },
+    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro — long-context (legacy)", pricing: { input_per_million_usd: 1.25, output_per_million_usd: 10 }, best_for: "Long teardowns", supports_vision: true },
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (legacy)", pricing: { input_per_million_usd: 0.3, output_per_million_usd: 2.5 }, supports_vision: true },
   ],
   testKey,
   call,

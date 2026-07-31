@@ -3,7 +3,7 @@
 // live so stale responses never leak.
 // VERSION is rewritten by scripts/sw-stamp.cjs at build time to the current git
 // SHA so each deploy invalidates the previous shell cache. (Audit finding #38.)
-const VERSION = "openadkit-2beca2d";
+const VERSION = "openadkit-abbca95";
 const SHELL = ["/", "/setup", "/manifest.webmanifest"];
 
 // Any GET request whose hostname includes one of these strings is left
@@ -47,10 +47,27 @@ self.addEventListener("fetch", (event) => {
   // Never touch LLM provider or ingest API calls.
   if (NEVER_INTERCEPT_HOSTS.some((h) => url.hostname.includes(h))) return;
 
-  // Never cache the local launcher sidecar — it's stateful, ports change.
-  if (url.hostname === "127.0.0.1" || url.hostname === "localhost") {
-    // Allow same-origin app shell caching; skip sidecar API endpoints.
-    if (url.port === "3006" || url.pathname.startsWith("/status") || url.pathname.startsWith("/snapshot") || url.pathname.startsWith("/diagnostics")) {
+  // Never touch the local launcher sidecar — it's stateful, and its port is
+  // assigned at launch time so we can't match on a fixed number (this used to
+  // check `url.port === "3006"`, which stopped matching the moment the port
+  // resolver shipped; sidecar calls then got the offline shell HTML handed
+  // back to them instead of a network error).
+  //
+  // Rule: any loopback request to an origin that ISN'T this page's own origin
+  // is a sidecar call. Same-origin loopback requests are the app shell and
+  // stay cacheable, minus the sidecar API paths the app also serves.
+  const isLoopback = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  if (isLoopback) {
+    if (url.origin !== self.location.origin) return;
+    if (
+      url.pathname.startsWith("/health") ||
+      url.pathname.startsWith("/status") ||
+      url.pathname.startsWith("/snapshot") ||
+      url.pathname.startsWith("/ingest") ||
+      url.pathname.startsWith("/config") ||
+      url.pathname.startsWith("/update") ||
+      url.pathname.startsWith("/diagnostics")
+    ) {
       return;
     }
   }
@@ -74,6 +91,16 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(event.request).then((m) => m || caches.match("/")))
+      .catch(() =>
+        caches.match(event.request).then((m) => {
+          if (m) return m;
+          // Only hand back the app shell for actual page navigations. Doing it
+          // for every failed request means an API/JSON call that fails offline
+          // receives HTML, and the caller's res.json() throws a confusing
+          // parse error instead of a clean network error.
+          if (event.request.mode === "navigate") return caches.match("/");
+          return Response.error();
+        })
+      )
   );
 });

@@ -2,31 +2,41 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  KeyRound, Eye, EyeOff, Save, CheckCircle2, Loader2, Download, Upload, Trash2, ExternalLink, Zap, Lock,
+  KeyRound, Eye, EyeOff, Save, CheckCircle2, Loader2, Download, Upload, Trash2, ExternalLink, Zap, Lock, Unlock, AlertTriangle,
 } from "lucide-react";
-import { ApiKeyGate } from "@/components/ApiKeyGate";
 import { PageHeader } from "@/components/PageHeader";
 import {
-  getActiveProviderId, setActiveProviderId, getProviderKey, setProviderKey, clearProviderKey,
+  getActiveProviderId, setActiveProviderId, clearActiveProviderId,
+  getProviderKey, setProviderKey, clearProviderKey, hasProviderKey,
   getActiveModelId, setActiveModelId, getUsage, resetUsage,
   getLanguage, setLanguage, getToneOverride, setToneOverride,
   getCharWarn, setCharWarn, getAutoSave, setAutoSave,
   getJinaKey, setJinaKey,
 } from "@/lib/settings";
 import { PROVIDERS, type Provider } from "@/lib/providers";
-import { testApiKey } from "@/lib/llm";
+import { verifyApiKey, type KeyCheckResult } from "@/lib/llm";
 import { exportAll, importAll, wipeAll } from "@/lib/storage";
 import { formatCost, formatTokens } from "@/lib/utils";
 import { CURRENCIES, getCurrencyCode, setCurrencyCode } from "@/lib/currency";
 import { isHostedMode } from "@/lib/env";
 import { getProviderLimits } from "@/lib/provider-limits";
+import {
+  getMonthlyBudgetUsd, setMonthlyBudgetUsd, isHardStopEnabled, setHardStopEnabled,
+  getBudgetStatus, BUDGET_WARN_AT, type BudgetStatus,
+} from "@/lib/budget";
+import {
+  isVaultSupported, isVaultEnabled, isVaultUnlocked, enableVault, disableVault,
+  lockVault, primePlaintextCache, clearPlaintextCache,
+} from "@/lib/key-vault";
 
+/**
+ * NOT wrapped in <ApiKeyGate>. Settings is where you ADD a key — gating it on
+ * already having one created a dead end: the StatusBar's "No key" badge links
+ * here, and the gate bounced you straight back to /setup. Deleting your only
+ * key also locked you out of the page you'd use to add another.
+ */
 export default function SettingsPage() {
-  return (
-    <ApiKeyGate>
-      <SettingsInner />
-    </ApiKeyGate>
-  );
+  return <SettingsInner />;
 }
 
 function SettingsInner() {
@@ -36,6 +46,14 @@ function SettingsInner() {
   const [modelsByProvider, setModelsByProvider] = useState<Record<string, string>>({});
   const [testing, setTesting] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
+  // Per-provider verification result, shown inline on that provider's card and
+  // kept until the next attempt. The old UI flashed "saved" for 1500ms and put
+  // failures in a single banner at the top of a 9-provider list — easy to miss
+  // entirely, and ambiguous about which card it referred to.
+  const [verify, setVerify] = useState<Record<string, KeyCheckResult | null>>({});
+  /** Provider ids with a key actually persisted (survives a locked vault). */
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const refreshSavedIds = () => setSavedIds(PROVIDERS.filter((p) => hasProviderKey(p.id)).map((p) => p.id));
   const [error, setError] = useState<string | null>(null);
   const [usage, setUsage] = useState({ cost: 0, input: 0, output: 0 });
   const [lang, setLang] = useState("English");
@@ -45,6 +63,14 @@ function SettingsInner() {
   const [jina, setJinaState] = useState("");
   const [syncKeys, setSyncKeysState] = useState(false);
   const [currency, setCurrencyState] = useState("USD");
+  const [budget, setBudget] = useState("");
+  const [hardStop, setHardStop] = useState(false);
+  const [budgetStatus, setBudgetStatus] = useState<BudgetStatus | null>(null);
+  const [vaultSupported, setVaultSupported] = useState(true);
+  const [vaultEnabled, setVaultEnabled] = useState(false);
+  const [vaultUnlocked, setVaultUnlocked] = useState(false);
+  const [vaultPass, setVaultPass] = useState("");
+  const [vaultError, setVaultError] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -57,6 +83,7 @@ function SettingsInner() {
     }
     setKeys(ks);
     setModelsByProvider(ms);
+    setSavedIds(PROVIDERS.filter((p) => hasProviderKey(p.id)).map((p) => p.id));
     setUsage(getUsage());
     setLang(getLanguage());
     setTone(getToneOverride());
@@ -64,10 +91,63 @@ function SettingsInner() {
     setAutoSaveState(getAutoSave());
     setJinaState(getJinaKey());
     setCurrencyState(getCurrencyCode());
+    const limit = getMonthlyBudgetUsd();
+    setBudget(limit ? String(limit) : "");
+    setHardStop(isHardStopEnabled());
+    getBudgetStatus().then(setBudgetStatus).catch(() => {});
+    setVaultSupported(isVaultSupported());
+    setVaultEnabled(isVaultEnabled());
+    setVaultUnlocked(isVaultUnlocked());
     if (typeof window !== "undefined") {
       setSyncKeysState(window.localStorage.getItem("ados.sync_include_keys") === "1");
     }
+    const onVault = () => {
+      setVaultEnabled(isVaultEnabled());
+      setVaultUnlocked(isVaultUnlocked());
+    };
+    window.addEventListener("ados:vault-changed", onVault);
+    return () => window.removeEventListener("ados:vault-changed", onVault);
   }, []);
+
+  function persistBudget(v: string) {
+    setBudget(v);
+    setMonthlyBudgetUsd(Number(v));
+    getBudgetStatus().then(setBudgetStatus).catch(() => {});
+  }
+  function persistHardStop(v: boolean) {
+    setHardStop(v);
+    setHardStopEnabled(v);
+    getBudgetStatus().then(setBudgetStatus).catch(() => {});
+  }
+
+  function refreshVault() {
+    setVaultEnabled(isVaultEnabled());
+    setVaultUnlocked(isVaultUnlocked());
+  }
+
+  async function turnOnVault() {
+    setVaultError(null);
+    try {
+      await enableVault(vaultPass);
+      await primePlaintextCache();
+      setVaultPass("");
+      refreshVault();
+    } catch (e: any) {
+      setVaultError(e?.message ?? "Could not enable encryption.");
+    }
+  }
+
+  async function turnOffVault() {
+    if (!confirm("Decrypt your API keys back to plain storage on this browser?")) return;
+    setVaultError(null);
+    try {
+      await disableVault();
+      clearPlaintextCache();
+      refreshVault();
+    } catch (e: any) {
+      setVaultError(e?.message ?? "Could not disable encryption.");
+    }
+  }
 
   function persistJina(v: string) { setJinaState(v.trim()); setJinaKey(v.trim()); }
   function persistSyncKeys(v: boolean) {
@@ -82,28 +162,41 @@ function SettingsInner() {
     setError(null);
     const k = keys[p.id] ?? "";
     if (!k.trim()) {
-      setError(`Paste a ${p.name} key first.`);
+      setVerify((v) => ({ ...v, [p.id]: { ok: false, authenticated: false, message: `Paste a ${p.name} key first.` } }));
       return;
     }
+    setVerify((v) => ({ ...v, [p.id]: null }));
     setTesting(p.id);
-    // try/finally — without it a network timeout/error from testApiKey would
-    // leave `testing` stuck and the verify button permanently disabled until
-    // page reload. (Audit finding #30.)
-    let ok = false;
+    // try/finally — without it a network timeout/error would leave `testing`
+    // stuck and the verify button permanently disabled until page reload.
+    // (Audit finding #30.)
+    let result: KeyCheckResult;
     try {
-      ok = await testApiKey(k, p.id);
+      result = await verifyApiKey(k, p.id);
     } catch (e: any) {
-      setError(`${p.name} key check failed: ${e?.message ?? "network error"}.`);
-      return;
+      result = { ok: false, authenticated: false, message: `Key check failed: ${e?.message ?? "network error"}.` };
     } finally {
       setTesting(null);
     }
-    if (!ok) {
-      setError(`${p.name} rejected that key.`);
-      return;
-    }
+    setVerify((v) => ({ ...v, [p.id]: result }));
+
+    // Save whenever the key AUTHENTICATED, even if the call didn't fully
+    // succeed. A 429 means the key is valid and merely throttled; discarding
+    // it there would make the user delete a working key.
+    if (!result.authenticated) return;
+
     setProviderKey(p.id, k);
+    refreshSavedIds();
     setActiveModelId(p.id, modelsByProvider[p.id] ?? p.default_model);
+    // Make this the active provider when nothing else is active. Without it, a
+    // user could save + verify their first key here and still hit "No API key"
+    // on every generator, because getApiKey() resolves against the ACTIVE
+    // provider and there wasn't one.
+    if (!getActiveProviderId()) {
+      setActiveProviderId(p.id);
+      setActiveId(p.id);
+      window.dispatchEvent(new Event("ados:provider-changed"));
+    }
     setSavedFlash(p.id);
     setTimeout(() => setSavedFlash(null), 1500);
   }
@@ -121,7 +214,27 @@ function SettingsInner() {
   function removeProviderKey(p: Provider) {
     if (!confirm(`Forget the ${p.name} key on this browser?`)) return;
     clearProviderKey(p.id);
-    setKeys({ ...keys, [p.id]: "" });
+    const nextKeys = { ...keys, [p.id]: "" };
+    setKeys(nextKeys);
+    setVerify((v) => ({ ...v, [p.id]: null }));
+    refreshSavedIds();
+    // If we just deleted the ACTIVE provider's key, hand the active slot to
+    // another configured provider (or clear it). Leaving it pointed at a
+    // keyless provider puts the app in a "configured but unusable" state where
+    // every generator fails with "No API key" despite other keys being saved.
+    if (getActiveProviderId() === p.id) {
+      // Persisted keys, not typed-but-unsaved ones — handing the active slot to
+      // a provider whose key was never saved just recreates the dead state.
+      const replacement = PROVIDERS.find((q) => q.id !== p.id && hasProviderKey(q.id));
+      if (replacement) {
+        setActiveProviderId(replacement.id);
+        setActiveId(replacement.id);
+      } else {
+        clearActiveProviderId();
+        setActiveId("");
+      }
+      window.dispatchEvent(new Event("ados:provider-changed"));
+    }
   }
 
   async function doExport() {
@@ -131,8 +244,15 @@ function SettingsInner() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `ados-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.style.display = "none";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    // Deferred revoke — revoking in the same task can cancel the download in
+    // Firefox/Safari before the browser has read the blob.
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 0);
   }
   async function doImport(file: File) {
     try {
@@ -163,8 +283,16 @@ function SettingsInner() {
       <div className="space-y-4 stagger">
         <section className="border border-base-600 bg-base-900/40 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-muted">ai providers</h2>
-            <span className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">{Object.values(keys).filter(Boolean).length} configured</span>
+            <h2 className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-muted">
+              ai providers
+              <a href="/providers" className="ml-2 text-info hover:underline normal-case tracking-normal font-sans text-[11px]">
+                which one should I use? →
+              </a>
+            </h2>
+            {/* Counts PERSISTED keys. Counting the input values meant a key you
+                typed but never saved (or that failed verification) inflated the
+                total. */}
+            <span className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">{savedIds.length} configured</span>
           </div>
 
           {error ? (
@@ -176,7 +304,11 @@ function SettingsInner() {
           <div className="space-y-3">
             {PROVIDERS.map((p) => {
               const active = activeId === p.id;
-              const hasKey = Boolean(keys[p.id]);
+              // Reflects what is actually STORED, not what's typed in the box.
+              // Deriving this from the input meant typing a key that then failed
+              // verification still flipped the card to "configured" and offered
+              // "forget key" — for a key that was never saved.
+              const hasKey = savedIds.includes(p.id);
               return (
                 <div key={p.id} className={`border ${active ? "border-live bg-live/5" : "border-base-700 bg-base-900/30"} p-4`}>
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -286,6 +418,43 @@ function SettingsInner() {
                     </div>
                   </div>
 
+                  {/* Verification result — inline, on the card it belongs to,
+                      and it stays put until the next attempt. */}
+                  {testing === p.id ? (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      className="mt-3 flex items-center gap-2 border border-base-600 bg-base-900/60 px-3 py-2 text-[12px] text-ink-muted"
+                    >
+                      <Loader2 size={12} className="animate-spin shrink-0 text-live" />
+                      Checking the key against {p.name}…
+                    </div>
+                  ) : verify[p.id] ? (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      className={`mt-3 flex items-start gap-2 border px-3 py-2 text-[12px] leading-relaxed ${
+                        verify[p.id]!.ok
+                          ? "border-pos/40 bg-pos/[0.06] text-pos"
+                          : verify[p.id]!.authenticated
+                            ? "border-live/40 bg-live/[0.06] text-live"
+                            : "border-neg/40 bg-neg/5 text-neg"
+                      }`}
+                    >
+                      {verify[p.id]!.ok ? (
+                        <CheckCircle2 size={13} className="shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                      )}
+                      <span>
+                        {verify[p.id]!.message}
+                        {verify[p.id]!.ok && verify[p.id]!.modelId ? (
+                          <span className="text-ink-muted"> (tested with {verify[p.id]!.modelId})</span>
+                        ) : null}
+                      </span>
+                    </div>
+                  ) : null}
+
                   <div className="flex items-center gap-2 mt-3 pt-2 border-t border-base-700">
                     <button onClick={() => saveProvider(p)} disabled={testing === p.id} className="btn-primary">
                       {testing === p.id ? <Loader2 size={11} className="animate-spin" /> : savedFlash === p.id ? <CheckCircle2 size={11} /> : <Save size={11} />}
@@ -363,6 +532,55 @@ function SettingsInner() {
           </section>
 
           <section className="border border-base-600 bg-base-900/40 p-5 space-y-4">
+            <h2 className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-muted">monthly budget</h2>
+            <div>
+              <label className="label" htmlFor="budget-limit">spend ceiling (USD / calendar month)</label>
+              <input
+                id="budget-limit"
+                type="number"
+                min={0}
+                step="1"
+                className="input-base tabular"
+                value={budget}
+                onChange={(e) => persistBudget(e.target.value)}
+                placeholder="0 = no limit"
+              />
+              <p className="text-[11px] text-ink-muted mt-1.5">
+                Calculated from your saved history, so it reflects real generation cost — not the
+                lifetime counters below. You&apos;ll see a warning at {Math.round(BUDGET_WARN_AT * 100)}%.
+              </p>
+            </div>
+            {budgetStatus && budgetStatus.limitUsd > 0 ? (
+              <div className="space-y-1.5">
+                <div className="h-1.5 w-full bg-base-800 overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${
+                      budgetStatus.exceeded ? "bg-neg" : budgetStatus.warning ? "bg-live" : "bg-pos"
+                    }`}
+                    style={{ width: `${Math.min(100, Math.round(budgetStatus.ratio * 100))}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] tabular">
+                  <span className={budgetStatus.exceeded ? "text-neg" : "text-ink-muted"}>
+                    {formatCost(budgetStatus.spentUsd)} used
+                  </span>
+                  <span className="text-ink-faint">
+                    {budgetStatus.exceeded
+                      ? "over budget"
+                      : `${formatCost(budgetStatus.remainingUsd)} left`}
+                  </span>
+                </div>
+              </div>
+            ) : null}
+            <ToggleRow
+              label="hard stop at 100%"
+              desc="off = warn only · on = refuse new generations once the ceiling is hit"
+              v={hardStop}
+              on={persistHardStop}
+            />
+          </section>
+
+          <section className="border border-base-600 bg-base-900/40 p-5 space-y-4">
             <h2 className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-muted">usage</h2>
             <div className="grid grid-cols-3 gap-2">
               <Stat label="cost" value={formatCost(usage.cost)} accent />
@@ -397,6 +615,66 @@ function SettingsInner() {
               <input ref={importRef} type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} />
               <button onClick={() => importRef.current?.click()} className="btn-ghost"><Upload size={11} /> import</button>
             </div>
+          </section>
+
+          <section className="border border-base-600 bg-base-900/40 p-5 space-y-3">
+            <h2 className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-muted">key encryption</h2>
+            {!vaultSupported ? (
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Unavailable in this browser — WebCrypto needs a secure context (https, or localhost).
+              </p>
+            ) : vaultEnabled ? (
+              <>
+                <p className="text-[11px] text-ink-muted leading-relaxed">
+                  Your provider keys are encrypted at rest with AES-GCM, unlocked once per session.
+                  This protects keys sitting on disk from other software on this machine — it can&apos;t
+                  protect a key while the app is unlocked and using it.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {vaultUnlocked ? (
+                    <button onClick={() => { lockVault(); clearPlaintextCache(); refreshVault(); }} className="btn-ghost">
+                      <Lock size={11} /> lock now
+                    </button>
+                  ) : (
+                    <span className="text-[11px] font-mono uppercase tracking-ui-wide text-live">locked · unlock from the banner</span>
+                  )}
+                  <button onClick={turnOffVault} className="btn-ghost hover:text-neg" disabled={!vaultUnlocked}>
+                    <Unlock size={11} /> turn off + decrypt
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] text-ink-muted leading-relaxed">
+                  Off by default: keys live in plain localStorage, readable by any browser extension
+                  or anyone with access to this profile. Turning this on encrypts them with a
+                  passphrase you enter once per session.{" "}
+                  <strong className="text-ink">There is no recovery</strong> — forget the passphrase and
+                  you re-enter your keys.
+                </p>
+                <div className="flex flex-wrap gap-2 items-end">
+                  <div className="flex-1 min-w-[180px]">
+                    <label className="label" htmlFor="vault-pass">passphrase (8+ characters)</label>
+                    <input
+                      id="vault-pass"
+                      type="password"
+                      className="input-base"
+                      value={vaultPass}
+                      onChange={(e) => setVaultPass(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <button onClick={turnOnVault} className="btn-primary" disabled={vaultPass.length < 8}>
+                    <Lock size={11} /> encrypt my keys
+                  </button>
+                </div>
+              </>
+            )}
+            {vaultError ? (
+              <div className="border border-neg/40 bg-neg/5 text-neg text-[11px] px-3 py-2 font-mono uppercase tracking-ui-wide">
+                {vaultError}
+              </div>
+            ) : null}
           </section>
 
           <section className="border border-neg/40 bg-neg/5 p-5 space-y-3">

@@ -40,12 +40,40 @@ export function pickVisionProvider(excluding?: ProviderId): ProviderId | null {
   return null;
 }
 
-/** Tighter limits to keep base64 payloads under most provider input caps.
- *  Claude limit ~5 MB per image, OpenAI ~20 MB total, Gemini ~7 MB. */
+/** Limits chosen so the BASE64-ENCODED payload stays under provider caps.
+ *
+ *  Base64 inflates by ~4/3, so the old 4.5 MB raw ceiling produced a ~6 MB
+ *  encoded image — over Anthropic's ~5 MB per-image limit, meaning uploads at
+ *  the documented maximum were rejected by the API after the user had already
+ *  waited through the encode. 3.5 MB raw ≈ 4.7 MB encoded, which fits Claude
+ *  (~5 MB), OpenAI (~20 MB total), and Gemini (~7 MB). */
 export const VISION_LIMITS = {
-  max_bytes_per_image: 4_500_000, // 4.5 MB raw — base64-encoded becomes ~6 MB
+  max_bytes_per_image: 3_500_000, // 3.5 MB raw ≈ 4.7 MB base64
   allowed_mime_types: ["image/png", "image/jpeg", "image/webp", "image/gif"] as const,
 };
+
+/** Human-readable ceiling, kept in sync with max_bytes_per_image for UI copy. */
+export const MAX_IMAGE_MB = (VISION_LIMITS.max_bytes_per_image / 1_000_000).toFixed(1);
+
+/**
+ * Base64-encode bytes without melting the main thread.
+ *
+ * The previous implementation was
+ *   `bytes.reduce((acc, b) => acc + String.fromCharCode(b), "")`
+ * which allocates a fresh string per byte — millions of intermediate
+ * allocations for a multi-MB image, several seconds of frozen UI, and a real
+ * OOM risk on low-end devices. Chunked `fromCharCode.apply` does the same work
+ * in a few thousand calls. The chunk size stays well under the argument-count
+ * limit that makes `apply` throw RangeError.
+ */
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000; // 32 KB
+  const parts: string[] = [];
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    parts.push(String.fromCharCode(...bytes.subarray(i, i + CHUNK)));
+  }
+  return btoa(parts.join(""));
+}
 
 /**
  * Read a browser File / Blob and convert it into our neutral ImagePart format.
@@ -58,11 +86,11 @@ export async function fileToImagePart(file: File | Blob): Promise<ImagePart> {
   }
   if (file.size > VISION_LIMITS.max_bytes_per_image) {
     const mb = (file.size / 1_000_000).toFixed(1);
-    throw new Error(`Image is ${mb} MB — keep it under 4.5 MB.`);
+    throw new Error(
+      `Image is ${mb} MB — keep it under ${MAX_IMAGE_MB} MB (providers cap the base64-encoded size, which is ~33% larger than the file).`
+    );
   }
   const buf = await file.arrayBuffer();
-  const data = btoa(
-    new Uint8Array(buf).reduce((acc, byte) => acc + String.fromCharCode(byte), "")
-  );
+  const data = bytesToBase64(new Uint8Array(buf));
   return { type: "image", media_type: mime as ImagePart["media_type"], data };
 }

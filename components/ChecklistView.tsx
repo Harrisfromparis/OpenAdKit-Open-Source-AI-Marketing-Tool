@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Flame, RotateCcw, Plus, Trash2 } from "lucide-react";
-import { ApiKeyGate } from "./ApiKeyGate";
 import { PageHeader } from "./PageHeader";
 import { CHECKLISTS, type ChecklistScope } from "@/lib/checklists";
 import { db, type ChecklistState } from "@/lib/storage";
@@ -18,12 +17,14 @@ interface Props {
   scope: ChecklistScope;
 }
 
+/**
+ * NOT gated behind <ApiKeyGate>: the checklists are static content with local
+ * state and make zero LLM calls. Requiring an API key to tick a checkbox was
+ * pure friction — and pushed brand-new users to /setup from a page that would
+ * have given them value immediately.
+ */
 export function ChecklistView(props: Props) {
-  return (
-    <ApiKeyGate>
-      <Inner {...props} />
-    </ApiKeyGate>
-  );
+  return <Inner {...props} />;
 }
 
 function periodKey(scope: ChecklistScope, when = new Date()): string {
@@ -32,11 +33,29 @@ function periodKey(scope: ChecklistScope, when = new Date()): string {
     return `${y}-${String(when.getMonth() + 1).padStart(2, "0")}-${String(when.getDate()).padStart(2, "0")}`;
   }
   if (scope === "weekly") {
-    const onejan = new Date(y, 0, 1);
-    const week = Math.ceil(((when.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
-    return `${y}-W${String(week).padStart(2, "0")}`;
+    // ISO-8601 week numbering. The previous `onejan + getDay()` formula
+    // miscounted around year boundaries (it could yield week 53 and week 1 for
+    // days in the same actual week), which silently reset streaks every New Year.
+    const [isoYear, isoWeek] = isoWeekOf(when);
+    return `${isoYear}-W${String(isoWeek).padStart(2, "0")}`;
   }
   return `${y}-${String(when.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** ISO-8601 week number + its ISO week-year (which can differ from the calendar
+ *  year for days at either end of January/December). */
+function isoWeekOf(date: Date): [number, number] {
+  // Work in UTC on a copy so DST transitions can't shift the day.
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // ISO weeks run Mon(1)..Sun(7); getUTCDay() gives Sun=0.
+  const dayNum = d.getUTCDay() || 7;
+  // Shift to the Thursday of this week — the year that Thursday falls in is
+  // the ISO week-year by definition.
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const isoYear = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return [isoYear, week];
 }
 
 function isStaleForPeriod(scope: ChecklistScope, lastCompleted: number | null): boolean {
@@ -91,12 +110,24 @@ function Inner({ scope }: Props) {
     return customs.filter((c) => c.section === title);
   }
 
-  const totalItems = useMemo(
-    () => def.sections.reduce((sum, s) => sum + s.items.length, 0) + customs.length,
-    [def, customs]
+  /** Every item key that currently EXISTS on this page (built-ins + customs). */
+  const liveKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const s of def.sections) for (const i of s.items) keys.add(i.key);
+    for (const c of customs) keys.add(c.id);
+    return keys;
+  }, [def, customs]);
+
+  const totalItems = liveKeys.size;
+  // Count only checked rows whose item still exists. Counting every row in
+  // `state` meant a built-in item removed in a later release (or a custom item
+  // whose delete didn't clean up) kept contributing, which could push progress
+  // above 100%.
+  const checkedItems = useMemo(
+    () => Object.values(state).filter((s) => s.checked && liveKeys.has(s.item_key)).length,
+    [state, liveKeys]
   );
-  const checkedItems = useMemo(() => Object.values(state).filter((s) => s.checked).length, [state]);
-  const progress = totalItems ? Math.round((checkedItems / totalItems) * 100) : 0;
+  const progress = totalItems ? Math.min(100, Math.round((checkedItems / totalItems) * 100)) : 0;
   const maxStreak = useMemo(() => Math.max(0, ...Object.values(state).map((s) => s.streak || 0)), [state]);
 
   async function toggle(key: string) {

@@ -15,6 +15,11 @@
  * that touches our server, and it only sees the public URL the user typed.
  */
 import { isHostedMode } from "./env";
+import { getSyncOrigin, resolveSyncOrigin, candidateSyncOrigins } from "./sync-endpoint";
+// Read through settings rather than straight out of localStorage: the optional
+// key vault stores this encrypted, and a raw read would hand the ciphertext to
+// Jina as a bearer token.
+import { getJinaKey } from "./settings";
 export interface IngestMetadata {
   title?: string;
   description?: string;
@@ -29,7 +34,10 @@ export interface IngestResult {
   url: string;
   content: string;
   truncated: boolean;
-  source: "jina" | "allorigins" | "sidecar";
+  /** Which reader produced this content. "manual" = user pasted it — keeping
+   *  it distinct matters because the whole diagnostic story (and the "which
+   *  reader is failing" error message) is built on this field. */
+  source: "jina" | "allorigins" | "sidecar" | "manual";
   metadata?: IngestMetadata;
 }
 export interface IngestError {
@@ -52,41 +60,40 @@ function normalize(u: string): string {
   return url;
 }
 
-function getJinaKey(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    return window.localStorage.getItem("ados.jina_key") ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function sidecarOrigin(): string {
-  // The local-sync sidecar runs on the configured ADFORGE_SYNC_PORT (default
-  // 3006). The browser app is on a different port (3005), so we hit
-  // http://127.0.0.1:3006 directly. CORS is allowed by the sidecar.
-  // We can't read env vars in the browser; default to 3006 and trust the
-  // sidecar to be where OpenAdKit launcher put it.
-  return "http://127.0.0.1:3006";
-}
 
 function serverProxyUrl(target: string): string {
   // In hosted mode, hit the Next.js API route — same-origin, no CORS, runs
-  // server-side on Vercel/Cloudflare. In local mode, hit the sidecar on
-  // 127.0.0.1:3006. Both expose the same /ingest API shape.
+  // server-side on Vercel/Cloudflare. In local mode, hit the sidecar on the
+  // port the launcher actually chose (see lib/sync-endpoint.ts — this used to
+  // be hardcoded to 3006, which the port resolver moved away from on every
+  // install, silently disabling the sidecar reader). Both expose the same
+  // /ingest API shape.
   return isHostedMode()
     ? `/api/ingest?url=${encodeURIComponent(target)}`
-    : `${sidecarOrigin()}/ingest?url=${encodeURIComponent(target)}`;
+    : `${getSyncOrigin()}/ingest?url=${encodeURIComponent(target)}`;
 }
 
 /**
  * Server-side fetch — bypasses Jina quotas + browser CORS sandbox. In local
- * mode this is the sidecar on 127.0.0.1:3006; in hosted mode it's the
+ * mode this is the sidecar on its resolved loopback port; in hosted mode it's the
  * /api/ingest Next route. Most reliable path when external readers are
  * rate-limited or the user's network blocks them.
  */
 async function trySidecar(target: string, signal?: AbortSignal): Promise<IngestOutcome> {
   try {
+    // Local mode: make sure we've discovered which port the sidecar is on
+    // before building the URL. resolveSyncOrigin() caches per session, so this
+    // is one probe per tab, not one per ingest.
+    if (!isHostedMode()) {
+      const origin = await resolveSyncOrigin();
+      if (!origin) {
+        return {
+          ok: false,
+          recoverable: true,
+          message: `Sidecar not reachable on ${candidateOriginsLabel()} — is the launcher running?`,
+        };
+      }
+    }
     const res = await fetch(serverProxyUrl(target), { method: "GET", signal });
     // Specific case: sidecar is running but doesn't have /ingest (old version).
     // Tell the user to restart the launcher so it picks up the new code.
@@ -128,9 +135,14 @@ async function trySidecar(target: string, signal?: AbortSignal): Promise<IngestO
       recoverable: true,
       message: isHostedMode()
         ? "Server-side reader unreachable. The hosted /api/ingest route returned an error."
-        : "Sidecar unreachable on 127.0.0.1:3006 — is the launcher running?",
+        : `Sidecar unreachable on ${getSyncOrigin()} — is the launcher running?`,
     };
   }
+}
+
+/** Human-readable list of the origins we probed, for error messages. */
+function candidateOriginsLabel(): string {
+  return candidateSyncOrigins().join(" or ");
 }
 
 async function tryJina(target: string, signal?: AbortSignal): Promise<IngestOutcome> {
@@ -354,7 +366,7 @@ export function ingestPasted(rawUrl: string, content: string): IngestOutcome {
     return { ok: false, recoverable: false, message: e?.message ?? "Only http(s) URLs are allowed." };
   }
   const trimmed = content.length > MAX_CHARS ? content.slice(0, MAX_CHARS) : content;
-  return { ok: true, url: target, content: trimmed, truncated: content.length > MAX_CHARS, source: "jina" };
+  return { ok: true, url: target, content: trimmed, truncated: content.length > MAX_CHARS, source: "manual" };
 }
 
 export interface SocialProbe {

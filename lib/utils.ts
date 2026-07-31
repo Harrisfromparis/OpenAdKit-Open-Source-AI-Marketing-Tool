@@ -6,13 +6,26 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 // Server and first client render both emit USD so React hydration matches;
-// only after the first paint do we flip to the user's chosen currency, which
-// re-renders (StatusBar, /history) then pick up. (Hydration-mismatch fix.)
+// only afterwards do we flip to the user's chosen currency, which re-renders
+// (StatusBar, /history, /providers) then pick up.
+//
+// This used to flip on a bare requestAnimationFrame at module load. That is NOT
+// the same moment as "React has hydrated": the chunk executes as soon as it is
+// fetched and the next frame can easily land BEFORE React works through the
+// tree, so the first client render read `hydrated === true` and formatted with
+// the currency path while the server markup was plain USD. It went unnoticed
+// only because the two paths happen to agree for most values — $0.0000 in the
+// StatusBar renders identically either way. /providers prints per-run costs
+// like 0.0264, where the SSR branch rounds to "$0.03" and the currency path
+// keeps four decimals, and React reported a hydration mismatch.
+//
+// markHydrated() is called from a useEffect (see components/StatusBar.tsx),
+// which React guarantees does not run until after hydration is complete.
 let hydrated = false;
-if (typeof window !== "undefined") {
-  requestAnimationFrame(() => {
-    hydrated = true;
-  });
+
+/** Flip to currency-aware formatting. Must only be called from a React effect. */
+export function markHydrated(): void {
+  hydrated = true;
 }
 
 export function formatCost(usd: number): string {
@@ -24,7 +37,8 @@ export function formatCost(usd: number): string {
     return `$${usd.toFixed(2)}`;
   }
   // Lazy import so SSR doesn't choke on the browser-only localStorage path.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // (No eslint-disable needed — the previous one named a rule that isn't
+  // loaded by this config, which is itself an error under `next lint`.)
   const { formatMoney } = require("./currency");
   return formatMoney(usd, { fromUsd: true });
 }

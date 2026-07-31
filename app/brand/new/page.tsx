@@ -232,7 +232,9 @@ function Inner() {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      await saveBrain(pendingExtraction.brain);
+      await saveBrain(pendingExtraction.brain, {
+        reason: `before AI extraction from ${pendingExtraction.source}`,
+      });
       setActiveBrainId(pendingExtraction.brain.id);
       clearDraft();
       window.dispatchEvent(new Event("ados:brains-changed"));
@@ -316,6 +318,7 @@ function Inner() {
       const sourceLabel = `${r.url} (via ${
         r.source === "sidecar" ? "local sidecar" :
         r.source === "allorigins" ? "AllOrigins fallback" :
+        r.source === "manual" ? "manual paste" :
         "Jina Reader"
       })`;
       setQuickStatus("④ Asking AI to fill the inference-heavy fields (tone, audience, pain points, products)…");
@@ -879,7 +882,8 @@ function Inner() {
                     // abandons the form their other tools would all run against
                     // an empty brain. Activation happens when BrandBrainForm's
                     // own save action fires. (Audit finding #62.)
-                    await saveBrain(b);
+                    // Brand-new skeleton — nothing to snapshot.
+                    await saveBrain(b, { skipVersion: true });
                     window.dispatchEvent(new Event("ados:brains-changed"));
                     setEditing(b);
                   }}

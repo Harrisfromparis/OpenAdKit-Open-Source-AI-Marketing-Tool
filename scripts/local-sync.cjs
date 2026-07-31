@@ -179,6 +179,10 @@ function writeEnvLocal(updates) {
   };
   setKey("PORT", next.PORT);
   setKey("ADFORGE_SYNC_PORT", next.ADFORGE_SYNC_PORT);
+  // Browser-visible mirror — Next only inlines NEXT_PUBLIC_* names, and the web
+  // app needs the sidecar port to talk to us at all. Must stay in lockstep with
+  // ADFORGE_SYNC_PORT. See lib/sync-endpoint.ts.
+  setKey("NEXT_PUBLIC_ADFORGE_SYNC_PORT", next.ADFORGE_SYNC_PORT);
   while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
   fs.writeFileSync(ENV_LOCAL, lines.join("\n") + "\n", "utf8");
   return next;
@@ -197,20 +201,47 @@ function isAllowedOrigin(origin) {
   if (!origin) return false;
   try {
     const u = new URL(origin);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
     if (u.hostname !== "localhost" && u.hostname !== "127.0.0.1") return false;
-    // Web port is whatever .env.local says; sidecar port is PORT. Accept either,
-    // and a small range around them in case ports were auto-shifted.
     const p = Number(u.port);
     if (!Number.isFinite(p)) return false;
-    return (
-      p === webPort ||
-      p === PORT ||
-      // Tolerate the conventional defaults in case ports get shifted.
-      (p >= 3000 && p <= 3030)
-    );
+    // ONLY this install's two ports. The previous version also accepted
+    // anything on 3000-3030 "in case ports get shifted" — but 3000-3010 is
+    // where nearly every local dev server lives (Next, Vite, Rails, Flask), so
+    // any page served by one of those could POST /update/apply (git pull + npm
+    // install => arbitrary code execution), /quit, /config, /web/rebuild, or
+    // /snapshot (overwrite all user data). The port resolver now keeps us out
+    // of that range entirely, so the tolerance was pure attack surface.
+    // Ports are re-read from .env.local per request (see refreshPorts) so a
+    // shift doesn't require a restart to be honoured.
+    return p === webPort || p === PORT;
   } catch {
     return false;
   }
+}
+
+/**
+ * DNS-rebinding guard.
+ *
+ * Binding to 127.0.0.1 stops remote *network* access but not a remote *page*:
+ * an attacker's domain with a short TTL can resolve to 127.0.0.1, at which
+ * point the browser treats requests to it as same-origin and CORS never
+ * applies. Origin checks don't help either — GETs legitimately carry no Origin.
+ *
+ * The Host header is the one thing the attacker can't forge here: it carries
+ * the name the browser dialled, so `evil.com:PORT` is rejected while
+ * `127.0.0.1:PORT` is allowed. Without this, GET /snapshot (every brand brain,
+ * all ad history, and API keys when key-sync is enabled) and GET /config were
+ * readable cross-origin.
+ */
+function isAllowedHost(hostHeader) {
+  if (!hostHeader) return false;
+  // Strip the port; handle bracketed IPv6 literals.
+  const host = String(hostHeader).trim().toLowerCase();
+  const name = host.startsWith("[")
+    ? host.slice(0, host.indexOf("]") + 1)
+    : host.split(":")[0];
+  return name === "127.0.0.1" || name === "localhost" || name === "[::1]" || name === "::1";
 }
 
 function setCors(req, res) {
@@ -693,7 +724,26 @@ function stopWeb() {
 }
 
 // --- HTTP server ---
+/** Re-read the configured ports so an .env.local edit (or a launcher-driven
+ *  port shift) is honoured without restarting the sidecar. Cheap: one small
+ *  file read, and only on requests that need an authorization decision. */
+function refreshPorts() {
+  try {
+    const env = readEnvLocal();
+    webPort = envPort(env.PORT, webPort);
+  } catch {
+    /* keep the last known value */
+  }
+}
+
 const server = http.createServer(async (req, res) => {
+  // Host check runs FIRST and covers every method, including GET. This is the
+  // DNS-rebinding defence — see isAllowedHost(). Origin checks below can't
+  // cover GETs because browsers don't send Origin on them.
+  if (!isAllowedHost(req.headers.host)) {
+    return json(res, 403, { ok: false, error: "Invalid Host header." });
+  }
+  refreshPorts();
   setCors(req, res);
   if (req.method === "OPTIONS") { res.statusCode = 204; res.end(); return; }
   // CSRF enforcement (Critical): every state-changing endpoint here is a POST.
@@ -733,13 +783,17 @@ const server = http.createServer(async (req, res) => {
       // cwd lets OpenAdKit.bat/OpenAdKit.command distinguish "MY install's
       // sidecar" from "SOMEONE ELSE'S install on this same port" — needed
       // for multi-install port routing.
+      // `cwd` and `session_token` are only disclosed to a recognised local
+      // origin. /health has to stay readable unauthenticated (the port probe
+      // in lib/sync-endpoint.ts uses it), but an absolute filesystem path and
+      // a session token don't need to be part of that public surface.
+      const trusted = isAllowedOrigin(req.headers.origin || "") || !req.headers.origin;
       return json(res, 200, {
         ok: true,
         port: PORT,
-        cwd: PROJECT_ROOT,
         capabilities: ["status", "snapshot", "config", "web/start", "web/stop", "web/restart", "web/rebuild", "diagnostics", "update/check", "update/apply", "update/status", "ingest"],
-        sidecar_version: "2026.05.7fd6c23+", // bump this when adding new endpoints
-        session_token: SESSION_TOKEN,
+        sidecar_version: "2026.08.1", // bump this when adding new endpoints
+        ...(trusted ? { cwd: PROJECT_ROOT, session_token: SESSION_TOKEN } : {}),
       });
     }
 

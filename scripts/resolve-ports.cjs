@@ -67,9 +67,8 @@ function readEnv() {
 function writeEnv(updates) {
   const next = { ...readEnv(), ...updates };
   // Preserve any other keys the user added to .env.local (API keys, feature
-  // flags, …) — only PORT / ADFORGE_SYNC_PORT are managed here. The old
-  // implementation rewrote the file with just those two, deleting the rest.
-  // (Audit finding.)
+  // flags, …) — only the port keys are managed here. The old implementation
+  // rewrote the file with just those two, deleting the rest. (Audit finding.)
   let lines = fs.existsSync(ENV_LOCAL)
     ? fs.readFileSync(ENV_LOCAL, "utf8").split(/\r?\n/)
     : ["# OpenAdKit configuration (auto-resolved by scripts/resolve-ports.cjs)"];
@@ -83,6 +82,12 @@ function writeEnv(updates) {
   };
   setKey("PORT", next.PORT);
   setKey("ADFORGE_SYNC_PORT", next.ADFORGE_SYNC_PORT);
+  // The browser bundle can't read ADFORGE_SYNC_PORT — only NEXT_PUBLIC_* names
+  // are inlined by Next at build time. Without this mirror the web app has no
+  // way to learn which port the sidecar landed on, which is exactly how the
+  // hardcoded-3006 bug happened: the resolver moved the port and the browser
+  // kept calling the old one. Keep the two in lockstep. (lib/sync-endpoint.ts)
+  setKey("NEXT_PUBLIC_ADFORGE_SYNC_PORT", next.ADFORGE_SYNC_PORT);
   while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
   fs.writeFileSync(ENV_LOCAL, lines.join("\n") + "\n", "utf8");
 }
@@ -200,11 +205,15 @@ function normalize(p) {
 
       if (hasIngest && sameCwd) {
         // It's MY sidecar with the right code already running.
+        // Still rewrite .env.local so an install that predates the
+        // NEXT_PUBLIC_ mirror picks it up without needing a port shift.
+        writeEnv({ PORT: String(desiredWeb), ADFORGE_SYNC_PORT: String(desiredSync) });
         process.stdout.write(`ACTION=reuse PORT=${desiredWeb} SYNC=${desiredSync}\n`);
         return;
       }
       if (!hasIngest && sameCwd) {
         // It's MY sidecar but it's stale (predates /ingest). Caller will quit + restart.
+        writeEnv({ PORT: String(desiredWeb), ADFORGE_SYNC_PORT: String(desiredSync) });
         process.stdout.write(`ACTION=restart_stale PORT=${desiredWeb} SYNC=${desiredSync}\n`);
         return;
       }
@@ -225,6 +234,9 @@ function normalize(p) {
     const syncFree = await isPortFree(desiredSync);
     const webFree = await isPortFree(desiredWeb);
     if (syncFree && webFree) {
+      // Rewrite so NEXT_PUBLIC_ADFORGE_SYNC_PORT exists even when the ports
+      // themselves didn't change (upgrade path for older installs).
+      writeEnv({ PORT: String(desiredWeb), ADFORGE_SYNC_PORT: String(desiredSync) });
       process.stdout.write(`ACTION=start PORT=${desiredWeb} SYNC=${desiredSync}\n`);
       return;
     }

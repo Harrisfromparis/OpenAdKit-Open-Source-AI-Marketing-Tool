@@ -4,14 +4,14 @@
 
 # OpenAdKit — Open Source AI Marketing Tool
 
-<!-- Last updated: 2026-05-28 · keep this fresh on every meaningful README edit; AI citation engines treat it as a freshness signal -->
+<!-- Last updated: 2026-08-01 · keep this fresh on every meaningful README edit; AI citation engines treat it as a freshness signal -->
 
 ### The open source AI marketing tool · every ad platform · bring your own AI key · zero subscriptions
 
 *The open-source alternative to Jasper, AdCreative, Anyword, Pencil & Copy.ai · runs in your browser · MIT-licensed · built by [Dicecodes](https://dicecodes.com)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-ffb020.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-ffb020.svg)](CHANGELOG.md)
 [![Node 18.17+](https://img.shields.io/badge/node-%E2%89%A518.17-brightgreen.svg)](https://nodejs.org)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org)
 [![Built by Dicecodes](https://img.shields.io/badge/built%20by-Dicecodes-ffb020.svg)](https://dicecodes.com)
@@ -276,7 +276,9 @@ npm run start:all      # web app + local-sync sidecar together
 > First launch walks you through a 5-step wizard: welcome → tour → pick AI provider → paste key → optional first brand. No accounts. No env vars. No database.
 
 ### Pick your own port
-The default is **3005** for the web app and **3006** for the sidecar. Change either from the launcher's **Settings** card any time — no editor needed. Pick anything 1024–65535 (avoid 80 unless you want admin rights).
+The one-click launcher picks a free pair automatically on first run (high range, so it never collides with the dev servers that crowd 3000–3010); the shell installers default to **3005** / **3006**. Change either from the launcher's **Settings** card any time — no editor needed. Pick anything 1024–65535 (avoid 80 unless you want admin rights).
+
+If you edit `.env.local` by hand, set **both** `ADFORGE_SYNC_PORT` and `NEXT_PUBLIC_ADFORGE_SYNC_PORT` to the same value and rebuild — Next.js only exposes `NEXT_PUBLIC_*` variables to the browser, and that's how the web app finds the sidecar. The launcher keeps the two in sync for you.
 
 ### Want a prettier URL?
 - **Zero setup:** open `http://openadkit.localhost:3005/` instead of `http://localhost:3005/`. Works in Chrome / Firefox / Safari / Edge today — all modern browsers auto-resolve `*.localhost` to 127.0.0.1.
@@ -351,7 +353,7 @@ Every Google / Meta / TikTok generation includes a **live realistic mockup** —
 
 | Tier | Provider | Free? | Notes |
 |---|---|:-:|---|
-| **Free** | **Groq** | ✅ | ~30 req/min Llama 3.3 70B · fastest tokens/sec |
+| **Free** | **Groq** | ✅ | ~30 req/min · fastest tokens/sec |
 | **Free** | **Cerebras** | ✅ | ~30 req/min · even faster than Groq |
 | **Freemium** | **Google Gemini** | ✅ | Generous free tier on Flash · paid Pro |
 | **Freemium** | **OpenRouter** | ✅ | Free community models tagged `:free` |
@@ -559,7 +561,7 @@ Production build: 56 statically prerendered routes · 87 KB shared JS · 130-160
 | Typecheck | `npm run typecheck` | — | — |
 | Production build | `npm run build` | — | — |
 
-Ports: web app **3005** · sync sidecar **3006** (both localhost-only).
+Ports: auto-resolved at launch and written to `.env.local` (installers default to web app **3005** · sync sidecar **3006**). Both localhost-only.
 
 ---
 
@@ -587,8 +589,9 @@ Most problems come down to one of four things: a port already in use, Node missi
 
 **Symptom:** Launcher's "Open OpenAdKit" button points at the wrong port.
 
-- Open `.env.local` in the install folder. It should have two lines: `PORT=3005` and `ADFORGE_SYNC_PORT=3006` (use whatever values you picked at install).
-- If both ports match what the launcher shows, you're fine. If they don't, save the correct values in `.env.local` and force-stop everything (`scripts\stop.bat` or `bash scripts/stop.sh`), then relaunch.
+- Open `.env.local` in the install folder. It should have three lines: `PORT=`, `ADFORGE_SYNC_PORT=`, and `NEXT_PUBLIC_ADFORGE_SYNC_PORT=` (the last two **must match** — that's how the browser finds the sidecar).
+- If all of them match what the launcher shows, you're fine. If they don't, save the correct values in `.env.local` and force-stop everything (`scripts\stop.bat` or `bash scripts/stop.sh`), then relaunch — the launcher rewrites all three and rebuilds.
+- **Symptom that this is wrong:** brand-by-URL always falls back to Jina/AllOrigins, and folder sync never writes `snapshot.json`. Both features talk to the sidecar, so a mismatched public port disables them silently.
 
 ### Windows Defender / SmartScreen warning
 
@@ -682,7 +685,7 @@ For ad-copy generation across Google, Meta, TikTok, LinkedIn, YouTube, and X —
 Stored in your browser's `localStorage`, same as 1Password's browser extension stores your session. Every LLM call goes **directly from your browser to the provider** (api.anthropic.com, api.openai.com, etc.) — never proxied through any OpenAdKit server (we don't run one). Treat your install like a password manager: only set it up on devices you trust.
 
 ### Which AI provider should I pick if I want it free?
-**Groq** for speed, **Gemini 2.5 Flash** for free-tier generosity, or **OpenRouter** for free community models (`meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-chat-v3:free`). All four are first-class. Add multiple keys in Settings and switch between them per project.
+**Groq** for speed, **Gemini 3.6 Flash** for free-tier generosity, or **OpenRouter** for free community models (`google/gemma-4-31b-it:free`, `nvidia/nemotron-3-super-120b-a12b:free`). All four are first-class. Add multiple keys in Settings and switch between them per project.
 
 ### Can I run OpenAdKit on a server / for my whole team?
 Out of the box it's designed for one person on one machine. You *can* expose it on a LAN by changing the bind from `127.0.0.1` to `0.0.0.0` in `scripts/local-sync.cjs`, but it has no auth layer — anyone on the network would have full access including your API keys. For team use, fork it and add your own auth, or wait for a multi-user fork (or [hire us](mailto:Contact@dicecodes.com) to build one).

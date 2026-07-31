@@ -54,6 +54,16 @@ export interface LLMCallOptions {
   maxTokens?: number;
   temperature?: number;
   signal?: AbortSignal;
+  /**
+   * Ask the provider to cache the system prompt when it supports prefix
+   * caching. OpenAdKit sends the same ~1.1k-token framework stack + full brand
+   * brain as the system prompt on every generation, so a cache hit is ~90%
+   * cheaper on that prefix. Providers that don't support it ignore the flag.
+   *
+   * Only safe when the system prompt is stable across calls — which it is here
+   * (it's derived from the brand brain, not from per-request content).
+   */
+  cacheSystem?: boolean;
 }
 
 export interface LLMResult {
@@ -92,14 +102,128 @@ export interface Provider {
   models: ModelDef[];
   /** True if at least one model in the provider's catalog can accept images. */
   supports_vision?: boolean;
-  testKey: (apiKey: string) => Promise<boolean>;
+  /** True if the provider supports explicit system-prompt prefix caching
+   *  (honours LLMCallOptions.cacheSystem). Informational — adapters that don't
+   *  support it simply ignore the flag. */
+  supports_prompt_caching?: boolean;
+  testKey: (apiKey: string) => Promise<KeyCheckResult>;
   call: (opts: LLMCallOptions) => Promise<LLMResult>;
   stream: (opts: LLMCallOptions, handlers: StreamHandlers) => Promise<LLMResult>;
 }
+
+/**
+ * SSE event delimiter.
+ *
+ * The spec allows CRLF, LF, or CR line endings, and providers differ: Anthropic
+ * and the OpenAI-compatible hosts send LF LF, Gemini sends CRLF CRLF. Splitting
+ * on a hardcoded "\n\n" silently parsed ZERO events from Gemini — the stream
+ * appeared to succeed while returning nothing. Always split with this.
+ */
+export const SSE_EVENT_DELIMITER = /\r?\n\r?\n/;
 
 export class LLMError extends Error {
   constructor(message: string, public status?: number, public providerId?: string) {
     super(message);
     this.name = "LLMError";
   }
+}
+
+/**
+ * Outcome of a "Save + Verify" key check.
+ *
+ * `ok` and `authenticated` are deliberately separate. The previous API was a
+ * bare boolean, which conflated "this key is wrong" with every other reason a
+ * request can fail — so a 429 (which PROVES the key authenticated) was reported
+ * as "rejected that key", and a user on a free tier would delete a perfectly
+ * good key. A model-404 caused by our own stale catalog read the same way.
+ *
+ * Rule for callers: SAVE the key whenever `authenticated` is true, even if
+ * `ok` is false. Only an auth failure means the key itself is bad.
+ */
+export interface KeyCheckResult {
+  /** The key works and a real completion came back. */
+  ok: boolean;
+  /** The key itself is valid — the request got past authentication. */
+  authenticated: boolean;
+  /** HTTP status, when the failure came from the provider rather than the network. */
+  status?: number;
+  /** User-facing explanation. Always populated. */
+  message: string;
+  /** Model the check was performed against, for display. */
+  modelId?: string;
+}
+
+/**
+ * Turn a failed key-check into a KeyCheckResult, distinguishing "bad key" from
+ * everything else. Shared by every provider adapter so the classification is
+ * consistent.
+ */
+/**
+ * Providers disagree wildly on the status code for a bad key. Google's Gemini
+ * API returns **HTTP 400** ("API key not valid"), not 401 — so status alone
+ * would classify a plainly invalid Gemini key as "key appears valid, saved",
+ * the exact opposite of the truth. Match the message first, then fall back to
+ * status.
+ */
+const AUTH_FAILURE_TEXT =
+  /api[ _-]?key not valid|invalid[ _-]?api[ _-]?key|api[ _-]?key.*(invalid|expired|revoked)|incorrect api key|unauthorized|unauthenticated|authentication[ _-]?(failed|error)|permission[ _-]?denied|invalid[ _-]?authentication|no api key/i;
+
+export function classifyKeyCheckError(err: unknown, providerName: string, modelId: string): KeyCheckResult {
+  const status = err instanceof LLMError ? err.status : undefined;
+  const raw = err instanceof Error && err.message ? err.message : "Unknown error";
+  // Providers often end messages with a period; we append our own.
+  const detail = raw.replace(/\.\s*$/, "");
+
+  // Message-based auth detection runs BEFORE status, because a provider that
+  // reports auth failures as 400 would otherwise be misread as "key is fine".
+  if (AUTH_FAILURE_TEXT.test(raw)) {
+    return {
+      ok: false,
+      authenticated: false,
+      status,
+      modelId,
+      message: `${providerName} rejected this key: ${detail}. Check you copied it whole, and that it's a ${providerName} key.`,
+    };
+  }
+
+  if (status === 401 || status === 403) {
+    return { ok: false, authenticated: false, status, modelId, message: `${providerName} rejected this key. Check you copied it whole, and that it's for ${providerName} (not another provider).` };
+  }
+  if (status === 429) {
+    // Authenticated, just throttled. The key is good — keep it.
+    return { ok: true, authenticated: true, status, modelId, message: `Key works — ${providerName} is rate-limiting right now, so generation may need a moment. Saved.` };
+  }
+  if (status === 404) {
+    // Our catalog names a model this provider no longer serves. Not the user's fault.
+    return { ok: false, authenticated: true, status, modelId, message: `Key looks valid, but ${providerName} doesn't recognise the model "${modelId}". That's an OpenAdKit catalog problem, not your key — saved anyway. Try another model.` };
+  }
+  if (status && status >= 500) {
+    return { ok: false, authenticated: true, status, modelId, message: `${providerName} returned a server error (${status}). Nothing wrong with your key — saved. Try again shortly.` };
+  }
+  if (status === 402) {
+    return { ok: false, authenticated: true, status, modelId, message: `Key is valid but ${providerName} reports no credit/quota on the account. Saved — top up to use it.` };
+  }
+  if (status === 400) {
+    // Ambiguous: usually a malformed request on our side, but some providers
+    // use 400 for auth too (caught above by text). Don't claim the key is good.
+    return {
+      ok: false,
+      authenticated: false,
+      status,
+      modelId,
+      message: `${providerName} rejected the request: ${detail}. The key was NOT saved — double-check it, or try a different model.`,
+    };
+  }
+  if (status) {
+    // Unknown status. Honest wording: not rejected outright, but unproven.
+    return {
+      ok: false,
+      authenticated: true,
+      status,
+      modelId,
+      message: `${providerName} returned HTTP ${status}: ${detail}. The key wasn't rejected, so it's saved — confirm by running a generation.`,
+    };
+  }
+  // No status = never reached the provider (offline, DNS, CORS, blocked).
+  return { ok: false, authenticated: false, modelId, message: `Couldn't reach ${providerName} — ${detail}. Check your connection; the key wasn't verified.` };
 }

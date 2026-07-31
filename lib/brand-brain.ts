@@ -150,6 +150,7 @@ The user has not configured a Brand Brain yet. Write professional, conversion-fo
 that respects all platform character limits given in the user prompt.
 ${framework}
 HONESTY: Never fabricate stats, testimonials, named partnerships, awards, or certifications.
+OUTPUT: Do not include internal or system XML tags, scratchpad markup, or reasoning transcripts — finished copy only.
 AVOID: streamline, optimize, innovative, utilize, leverage, synergy, transform, "best", "#1", "leading" — unless verifiable.
 WEAK CTAs to replace: "Submit", "Sign Up", "Learn More", "Click Here", "Get Started" → use outcome-named action verbs ("Start My Free Trial", "Get the Checklist").${lang}${toneOverride}`;
   }
@@ -217,6 +218,8 @@ RULES:
 5. Reference competitors only indirectly (never name them negatively).
 6. Respect all platform character limits exactly. Validate your output before returning.
 7. When asked for JSON, return ONLY valid JSON — no prose, no markdown fences.
+8. Do not include internal or system XML tags, scratchpad markup, or reasoning
+   transcripts in your response. Return the finished copy only.
 
 HONESTY CONSTRAINT (non-negotiable):
 - Never fabricate statistics, testimonials, customer quotes, or named partnerships.

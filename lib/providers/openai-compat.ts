@@ -1,4 +1,4 @@
-import { LLMError, type LLMCallOptions, type LLMResult, type LLMUsage, type StreamHandlers } from "./types";
+import { LLMError, SSE_EVENT_DELIMITER, classifyKeyCheckError, type KeyCheckResult, type LLMCallOptions, type LLMResult, type LLMUsage, type StreamHandlers } from "./types";
 
 export interface OpenAICompatConfig {
   baseUrl: string;
@@ -134,10 +134,11 @@ export function makeOpenAICompatStream(cfg: OpenAICompatConfig, providerId: stri
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
+        // Tolerate CRLF as well as LF — see SSE_EVENT_DELIMITER.
+        const events = buffer.split(SSE_EVENT_DELIMITER);
         buffer = events.pop() ?? "";
         for (const ev of events) {
-          const dataLines = ev.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, ""));
+          const dataLines = ev.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, ""));
           for (const raw of dataLines) {
             const line = raw.trim();
             if (!line || line === "[DONE]") continue;
@@ -174,9 +175,9 @@ export function makeOpenAICompatStream(cfg: OpenAICompatConfig, providerId: stri
   };
 }
 
-export function makeOpenAICompatTestKey(cfg: OpenAICompatConfig, providerId: string) {
+export function makeOpenAICompatTestKey(cfg: OpenAICompatConfig, providerId: string, providerName: string) {
   const call = makeOpenAICompatCall(cfg, providerId);
-  return async function testKey(apiKey: string): Promise<boolean> {
+  return async function testKey(apiKey: string): Promise<KeyCheckResult> {
     try {
       await call({
         apiKey,
@@ -184,9 +185,9 @@ export function makeOpenAICompatTestKey(cfg: OpenAICompatConfig, providerId: str
         messages: [{ role: "user", content: "ping" }],
         maxTokens: 4,
       });
-      return true;
-    } catch {
-      return false;
+      return { ok: true, authenticated: true, modelId: cfg.testModel, message: "Verified — key works." };
+    } catch (e) {
+      return classifyKeyCheckError(e, providerName, cfg.testModel);
     }
   };
 }

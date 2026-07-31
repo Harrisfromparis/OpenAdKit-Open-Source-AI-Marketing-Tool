@@ -1,4 +1,5 @@
 import { getProvider } from "./providers";
+import { resolveStoredValue, prepareForStorage, isVaultEnabled, isCiphertext } from "./key-vault";
 
 const KEYS = {
   activeProvider: "ados.active_provider",
@@ -34,6 +35,48 @@ function providerModelName(providerId: string): string {
   return `ados.provider.${providerId}.model`;
 }
 
+/**
+ * Model IDs that were removed from a provider's catalog, mapped to their
+ * replacement. A saved selection pointing at a retired ID silently breaks cost
+ * estimation (findModel returns null → every generation reports $0) and can
+ * 404 at the provider, so we rewrite it on read. Add a row here whenever a
+ * model is dropped from lib/providers/*.
+ */
+const RETIRED_MODEL_IDS: Record<string, string> = {
+  // --- Anthropic ---
+  // Date-suffixed variants are not valid model IDs — use the bare alias.
+  "claude-haiku-4-5-20251001": "claude-haiku-4-5",
+  "claude-opus-4-6": "claude-opus-5",
+  "claude-opus-4-5": "claude-opus-5",
+  "claude-sonnet-4-5": "claude-sonnet-5",
+  // --- Google --- (2.0 Flash Lite withdrawn from the Gemini API)
+  "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+  "gemini-1.5-flash": "gemini-3.6-flash",
+  "gemini-1.5-pro": "gemini-2.5-pro",
+  // --- Groq --- (Mixtral decommissioned)
+  "mixtral-8x7b-32768": "openai/gpt-oss-120b",
+  // --- Cerebras --- (no longer serves any Llama model)
+  "llama-3.3-70b": "gpt-oss-120b",
+  "llama-3.1-8b": "gpt-oss-20b",
+  // --- OpenRouter --- (both free models withdrawn from the catalog)
+  "meta-llama/llama-3.3-70b-instruct:free": "google/gemma-4-31b-it:free",
+  "deepseek/deepseek-chat-v3:free": "google/gemma-4-31b-it:free",
+  "anthropic/claude-sonnet-4-6": "anthropic/claude-sonnet-5",
+  "google/gemini-2.5-flash": "google/gemini-3.6-flash",
+  "openai/gpt-4.1-mini": "openai/gpt-5.6-luna",
+  // --- DeepSeek --- (V3/R1 era IDs superseded by V4)
+  "deepseek-chat": "deepseek-v4-flash",
+  "deepseek-reasoner": "deepseek-v4-pro",
+  // --- Mistral --- (moving off floating aliases to explicit dated IDs)
+  "mistral-large-latest": "mistral-large-3-25-12",
+  "mistral-small-latest": "mistral-small-4-0-26-03",
+  // --- OpenAI --- (kept serving upstream, but dropped from our catalog, so a
+  // saved selection would silently price at $0)
+  "gpt-5": "gpt-5.6-terra",
+  "gpt-5-mini": "gpt-5.6-luna",
+  "gpt-4.1": "gpt-5.6-terra",
+};
+
 let _migrated = false;
 function migrateLegacyOnce() {
   if (_migrated) return;
@@ -45,15 +88,22 @@ function migrateLegacyOnce() {
     if (!s.getItem(providerKeyName("anthropic"))) s.setItem(providerKeyName("anthropic"), legacyKey);
     if (!s.getItem(KEYS.activeProvider)) s.setItem(KEYS.activeProvider, "anthropic");
     const modelMap: Record<string, string> = {
-      sonnet: "claude-sonnet-4-6",
-      opus: "claude-opus-4-7",
-      haiku: "claude-haiku-4-5-20251001",
+      sonnet: "claude-sonnet-5",
+      opus: "claude-opus-5",
+      haiku: "claude-haiku-4-5",
     };
     if (legacyModel && modelMap[legacyModel]) {
       s.setItem(providerModelName("anthropic"), modelMap[legacyModel]);
     }
     s.removeItem("ados.api_key");
     s.removeItem("ados.model");
+  }
+  // Rewrite any stored model selection that points at a retired ID.
+  for (let i = 0; i < s.length; i++) {
+    const k = s.key(i);
+    if (!k || !k.startsWith("ados.provider.") || !k.endsWith(".model")) continue;
+    const v = s.getItem(k);
+    if (v && RETIRED_MODEL_IDS[v]) s.setItem(k, RETIRED_MODEL_IDS[v]);
   }
   _migrated = true;
 }
@@ -65,25 +115,68 @@ export function getActiveProviderId(): string | null {
 export function setActiveProviderId(id: string): void {
   safeLocal()?.setItem(KEYS.activeProvider, id);
 }
+/** Clear the active provider. Used when the active provider's key is deleted
+ *  and no other configured provider is available to take over. */
+export function clearActiveProviderId(): void {
+  safeLocal()?.removeItem(KEYS.activeProvider);
+}
 
 export function getProviderKey(providerId: string): string {
   migrateLegacyOnce();
-  return safeLocal()?.getItem(providerKeyName(providerId)) ?? "";
+  const name = providerKeyName(providerId);
+  const raw = safeLocal()?.getItem(name) ?? "";
+  // Transparently decrypts when the optional key vault is enabled + unlocked;
+  // returns "" for unreadable ciphertext so callers behave as they would for a
+  // missing key (prompting the user rather than sending garbage to a provider).
+  return resolveStoredValue(name, raw);
 }
 export function setProviderKey(providerId: string, key: string): void {
-  safeLocal()?.setItem(providerKeyName(providerId), key);
+  const name = providerKeyName(providerId);
+  const s = safeLocal();
+  if (!s) return;
+  if (!isVaultEnabled()) {
+    s.setItem(name, key);
+    return;
+  }
+  // Write plaintext first so a failed encrypt can't lose the user's key, then
+  // replace it with ciphertext once the async encrypt resolves.
+  s.setItem(name, key);
+  prepareForStorage(name, key)
+    .then((stored) => s.setItem(name, stored))
+    .catch(() => {
+      /* vault locked — leave plaintext; the next lock/unlock cycle re-encrypts */
+    });
 }
 export function clearProviderKey(providerId: string): void {
   safeLocal()?.removeItem(providerKeyName(providerId));
 }
+/**
+ * Is a key PERSISTED for this provider? Distinct from getProviderKey() being
+ * non-empty: that returns "" for ciphertext behind a locked vault, and the
+ * Settings UI must not claim "not configured" just because the vault is shut.
+ * Also distinct from whatever is currently typed into the input box.
+ */
+export function hasProviderKey(providerId: string): boolean {
+  const raw = safeLocal()?.getItem(providerKeyName(providerId));
+  return Boolean(raw && raw.trim());
+}
 
 export function getActiveModelId(providerId: string): string | null {
-  return safeLocal()?.getItem(providerModelName(providerId)) ?? null;
+  migrateLegacyOnce();
+  const stored = safeLocal()?.getItem(providerModelName(providerId)) ?? null;
+  if (!stored) return null;
+  return RETIRED_MODEL_IDS[stored] ?? stored;
 }
 export function setActiveModelId(providerId: string, model: string): void {
   safeLocal()?.setItem(providerModelName(providerId), model);
 }
 
+/**
+ * Is at least one key STORED? Deliberately does not require the key vault to
+ * be unlocked — a locked vault means "prove who you are", not "you have no
+ * account", and bouncing the user to onboarding for it would be wrong.
+ * Usability of a specific key is getProvidersWithKeys()' job.
+ */
 export function hasAnyKeyConfigured(): boolean {
   migrateLegacyOnce();
   const s = safeLocal();
@@ -93,7 +186,8 @@ export function hasAnyKeyConfigured(): boolean {
     if (k && k.startsWith("ados.provider.") && k.endsWith(".key")) {
       const v = s.getItem(k);
       const id = k.slice("ados.provider.".length, -".key".length);
-      if (isPlausibleKey(id, v)) return true;
+      // Encrypted values count as configured — they're real keys behind a lock.
+      if (isCiphertext(v) || isPlausibleKey(id, v)) return true;
     }
   }
   return false;
@@ -112,7 +206,13 @@ export function hasAnyKeyConfigured(): boolean {
  *  is the right floor without being prefix-strict. */
 function isPlausibleKey(_providerId: string, key: string | null): boolean {
   if (!key) return false;
-  return key.trim().length >= 12;
+  const k = key.trim();
+  if (k.length < 16) return false;
+  // Real keys are a single opaque token: no whitespace, and enough distinct
+  // characters to rule out placeholder junk ("aaaaaaaaaaaaaaaaaa", "your-key-here").
+  if (/\s/.test(k)) return false;
+  if (new Set(k).size < 10) return false;
+  return true;
 }
 
 /** Return every provider id that has a saved key (length > 8) in localStorage.
@@ -126,8 +226,11 @@ export function getProvidersWithKeys(): string[] {
   for (let i = 0; i < s.length; i++) {
     const k = s.key(i);
     if (k && k.startsWith("ados.provider.") && k.endsWith(".key")) {
-      const v = s.getItem(k);
       const id = k.slice("ados.provider.".length, -".key".length);
+      // Resolve through the vault: callers (failover, vision fallback, the
+      // regenerate dialog) need keys they can actually USE right now, so a
+      // key sitting behind a locked vault must not be offered.
+      const v = resolveStoredValue(k, s.getItem(k));
       if (id && isPlausibleKey(id, v)) ids.push(id);
     }
   }
@@ -233,13 +336,21 @@ export function setAutoSave(v: boolean): void {
 
 // Optional Jina Reader API key (paid tier) — bypasses free-tier rate limits for URL ingest.
 export function getJinaKey(): string {
-  return safeLocal()?.getItem("ados.jina_key") ?? "";
+  return resolveStoredValue("ados.jina_key", safeLocal()?.getItem("ados.jina_key") ?? "");
 }
 export function setJinaKey(v: string): void {
   const s = safeLocal();
   if (!s) return;
-  if (v) s.setItem("ados.jina_key", v);
-  else s.removeItem("ados.jina_key");
+  if (!v) {
+    s.removeItem("ados.jina_key");
+    return;
+  }
+  s.setItem("ados.jina_key", v);
+  if (isVaultEnabled()) {
+    prepareForStorage("ados.jina_key", v)
+      .then((stored) => s.setItem("ados.jina_key", stored))
+      .catch(() => {});
+  }
 }
 
 // --- Backward-compat shims for legacy single-provider callers ---

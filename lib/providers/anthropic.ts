@@ -1,4 +1,4 @@
-import { LLMError, type LLMCallOptions, type LLMMessage, type LLMResult, type LLMUsage, type Provider, type StreamHandlers } from "./types";
+import { LLMError, SSE_EVENT_DELIMITER, classifyKeyCheckError, type KeyCheckResult, type LLMCallOptions, type LLMMessage, type LLMResult, type LLMUsage, type Provider, type StreamHandlers } from "./types";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
@@ -10,6 +10,52 @@ function headers(apiKey: string): HeadersInit {
     "anthropic-version": API_VERSION,
     "anthropic-dangerous-direct-browser-access": "true",
   };
+}
+
+/** Models that removed `temperature` / `top_p` / `top_k` from the request
+ *  surface — sending any of them returns HTTP 400. Covers the Claude 5 family
+ *  and Opus 4.7+. Steer these with prompting instead. */
+function rejectsSamplingParams(model: string): boolean {
+  return /^claude-(opus-5|sonnet-5|fable-5|mythos-5|opus-4-(7|8))/.test(model);
+}
+
+/** Models where thinking is adaptive-by-default (Claude Opus 5) or opt-in.
+ *  OpenAdKit generates short structured copy with `max_tokens` in the 2.5k–6k
+ *  range, and `max_tokens` caps thinking + response text *together* — leaving
+ *  adaptive thinking on would truncate the actual output mid-JSON. We disable
+ *  it explicitly, which Opus 5 accepts at the default `high` effort. */
+function supportsThinkingToggle(model: string): boolean {
+  return /^claude-(opus-5|sonnet-5|opus-4-(7|8))/.test(model);
+}
+
+/** Build the `system` field. When caching is requested and the prompt is long
+ *  enough to actually cache (the API silently no-ops below ~512-1024 tokens),
+ *  emit the block form with a cache_control breakpoint. OpenAdKit's system
+ *  prompt is the brand brain + framework stack — stable across every call for
+ *  a given brand, so it's an ideal cache prefix. */
+function buildSystem(opts: LLMCallOptions) {
+  if (!opts.system) return undefined;
+  // ~4 chars/token: only bother past ~600 tokens so we never pay the 1.25x
+  // cache-write premium on a prefix too short to be cached.
+  if (!opts.cacheSystem || opts.system.length < 2400) return opts.system;
+  return [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }];
+}
+
+function buildBody(opts: LLMCallOptions, stream: boolean) {
+  const body: Record<string, unknown> = {
+    model: opts.model,
+    max_tokens: opts.maxTokens ?? 2048,
+    system: buildSystem(opts),
+    messages: toAnthropicMessages(opts.messages),
+  };
+  if (stream) body.stream = true;
+  if (!rejectsSamplingParams(opts.model)) {
+    body.temperature = opts.temperature ?? 0.7;
+  }
+  if (supportsThinkingToggle(opts.model)) {
+    body.thinking = { type: "disabled" };
+  }
+  return body;
 }
 
 /** Translate OpenAdKit's neutral LLMMessage[] into Anthropic's wire format,
@@ -56,13 +102,7 @@ async function call(opts: LLMCallOptions): Promise<LLMResult> {
   const res = await fetch(API_URL, {
     method: "POST",
     headers: headers(opts.apiKey),
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens ?? 2048,
-      temperature: opts.temperature ?? 0.7,
-      system: opts.system,
-      messages: toAnthropicMessages(opts.messages),
-    }),
+    body: JSON.stringify(buildBody(opts, false)),
     signal: opts.signal,
   });
   if (!res.ok) throw await readError(res);
@@ -78,14 +118,7 @@ async function stream(opts: LLMCallOptions, handlers: StreamHandlers): Promise<L
   const res = await fetch(API_URL, {
     method: "POST",
     headers: headers(opts.apiKey),
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens ?? 2048,
-      temperature: opts.temperature ?? 0.7,
-      stream: true,
-      system: opts.system,
-      messages: toAnthropicMessages(opts.messages),
-    }),
+    body: JSON.stringify(buildBody(opts, true)),
     signal: opts.signal,
   });
   if (!res.ok) throw await readError(res);
@@ -100,10 +133,12 @@ async function stream(opts: LLMCallOptions, handlers: StreamHandlers): Promise<L
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split("\n\n");
+      // Tolerate CRLF as well as LF — see SSE_EVENT_DELIMITER. Anthropic sends
+      // LF today, but hardcoding that is what silently broke Gemini streaming.
+      const events = buffer.split(SSE_EVENT_DELIMITER);
       buffer = events.pop() ?? "";
       for (const ev of events) {
-        const dataLines = ev.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, ""));
+        const dataLines = ev.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, ""));
         for (const raw of dataLines) {
           const line = raw.trim();
           if (!line || line === "[DONE]") continue;
@@ -134,32 +169,41 @@ async function stream(opts: LLMCallOptions, handlers: StreamHandlers): Promise<L
   return { text: full, usage, modelId: opts.model };
 }
 
-async function testKey(apiKey: string): Promise<boolean> {
+const TEST_MODEL = "claude-haiku-4-5"; // un-suffixed alias; cheapest model
+async function testKey(apiKey: string): Promise<KeyCheckResult> {
   try {
     await call({
       apiKey,
-      model: "claude-haiku-4-5-20251001",
+      model: TEST_MODEL,
       messages: [{ role: "user", content: "ping" }],
       maxTokens: 4,
     });
-    return true;
-  } catch {
-    return false;
+    return { ok: true, authenticated: true, modelId: TEST_MODEL, message: "Verified — key works." };
+  } catch (e) {
+    return classifyKeyCheckError(e, "Anthropic", TEST_MODEL);
   }
 }
 
+// Pricing is USD per million tokens, from platform.claude.com/docs/en/pricing.
+// Reviewed 2026-08-01. lib/__tests__/providers-catalog.test.ts asserts the
+// catalog stays internally consistent; re-check the published prices whenever
+// a model is added (Opus 4.7 shipped listed at 15/75 here for months when the
+// real rate was 5/25 — a 3x over-report on every cost estimate).
 export const anthropic: Provider = {
   id: "anthropic",
   name: "Anthropic Claude",
   category: "paid",
   description: "The model OpenAdKit was originally built for. Strongest at long-context reasoning + safety. No free tier; pay-per-use.",
   get_key_url: "https://console.anthropic.com/settings/keys",
-  default_model: "claude-sonnet-4-6",
+  default_model: "claude-sonnet-5",
   supports_vision: true,
+  supports_prompt_caching: true,
   models: [
-    { id: "claude-opus-4-7", label: "Opus 4.7 — deepest reasoning", pricing: { input_per_million_usd: 15, output_per_million_usd: 75 }, best_for: "Complex audits, multi-step reasoning, long teardowns", supports_vision: true },
-    { id: "claude-sonnet-4-6", label: "Sonnet 4.6 — balanced (recommended)", pricing: { input_per_million_usd: 3, output_per_million_usd: 15 }, best_for: "Default for ad copy + optimization", supports_vision: true },
-    { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5 — fastest & cheapest", pricing: { input_per_million_usd: 1, output_per_million_usd: 5 }, best_for: "High-volume hashtag/subject generation", supports_vision: true },
+    { id: "claude-opus-5", label: "Opus 5 — deepest reasoning", pricing: { input_per_million_usd: 5, output_per_million_usd: 25 }, context_k: 1000, best_for: "Complex audits, multi-step reasoning, long teardowns", supports_vision: true },
+    { id: "claude-sonnet-5", label: "Sonnet 5 — balanced (recommended)", pricing: { input_per_million_usd: 3, output_per_million_usd: 15 }, context_k: 1000, best_for: "Default for ad copy + optimization", supports_vision: true },
+    { id: "claude-opus-4-7", label: "Opus 4.7 — previous flagship", pricing: { input_per_million_usd: 5, output_per_million_usd: 25 }, context_k: 1000, best_for: "Long-horizon agentic work", supports_vision: true },
+    { id: "claude-sonnet-4-6", label: "Sonnet 4.6 — previous balanced", pricing: { input_per_million_usd: 3, output_per_million_usd: 15 }, context_k: 1000, supports_vision: true },
+    { id: "claude-haiku-4-5", label: "Haiku 4.5 — fastest & cheapest", pricing: { input_per_million_usd: 1, output_per_million_usd: 5 }, context_k: 200, best_for: "High-volume hashtag/subject generation", supports_vision: true },
   ],
   testKey,
   call,

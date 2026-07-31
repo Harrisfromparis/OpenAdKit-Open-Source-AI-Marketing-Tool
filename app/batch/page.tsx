@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ZodTypeAny } from "zod";
 import Link from "next/link";
 import { Loader2, Sparkles, Check, X, AlertTriangle, ChevronDown, ChevronRight, StopCircle } from "lucide-react";
 import { ApiKeyGate } from "@/components/ApiKeyGate";
@@ -9,23 +10,31 @@ import { Section, Pill } from "@/components/OutputBlocks";
 import { CopyButton } from "@/components/CopyButton";
 import { listBrains, saveAd, type GeneratedAd } from "@/lib/storage";
 import { type BrandBrain, buildBrandSystemPrompt } from "@/lib/brand-brain";
-import { llmStream, estimateCostUsd, tryParseJson } from "@/lib/llm";
+import { llmStream, estimateCostUsd } from "@/lib/llm";
+import { validateOrRetry, StructuredLlmError } from "@/lib/llm-structured";
 import { addUsage, getLanguage, getToneOverride } from "@/lib/settings";
+import { assertWithinBudget } from "@/lib/budget";
 import { buildContentCalendarPrompt } from "@/lib/prompts/content-calendar";
 import { buildHashtagPrompt } from "@/lib/prompts/hashtags";
 import { buildCampaignKitPrompt } from "@/lib/prompts/campaign-kit";
 import { buildReelIdeasPrompt } from "@/lib/prompts/reel-ideas";
+import { ContentCalendarSchema } from "@/lib/schemas/content-calendar";
+import { CampaignKitSchema } from "@/lib/schemas/campaign-kit";
+import { HashtagsSchema, ReelIdeasSchema } from "@/lib/schemas/generators";
 
 type AssetKind = "content_calendar" | "hashtags" | "campaign_kit" | "reel_ideas";
 
 interface RunResult {
   brain_id: string;
   brain_name: string;
-  status: "pending" | "running" | "done" | "error";
+  status: "pending" | "running" | "done" | "error" | "cancelled";
   ad_id?: string;
   error?: string;
   text?: string;
   json?: any;
+  /** True when the first reply failed schema validation and a correction pass
+   *  recovered it — surfaced in the UI so the result is never silently "fixed". */
+  recovered?: boolean;
 }
 
 export default function Page() {
@@ -95,10 +104,14 @@ function Inner() {
     setSelected(new Set());
   }
 
-  function buildPromptFor(kind: AssetKind, brain: BrandBrain): { prompt: string; platform: GeneratedAd["platform"]; campaign_type: string; max: number } {
+  function buildPromptFor(
+    kind: AssetKind,
+    brain: BrandBrain
+  ): { prompt: string; platform: GeneratedAd["platform"]; campaign_type: string; max: number; schema: ZodTypeAny } {
     switch (kind) {
       case "content_calendar":
         return {
+          schema: ContentCalendarSchema,
           prompt: buildContentCalendarPrompt({
             duration: contentCalendarCfg.duration,
             cadence_per_week: contentCalendarCfg.cadence_per_week,
@@ -115,6 +128,7 @@ function Inner() {
         };
       case "hashtags":
         return {
+          schema: HashtagsSchema,
           prompt: buildHashtagPrompt({
             title: hashtagsCfg.topic_or_post || brain.usp || brain.business_name,
             platform: hashtagsCfg.platform as any,
@@ -127,6 +141,7 @@ function Inner() {
         };
       case "reel_ideas":
         return {
+          schema: ReelIdeasSchema,
           prompt: buildReelIdeasPrompt({
             platform: reelIdeasCfg.platform,
             reel_count: reelIdeasCfg.reel_count,
@@ -140,6 +155,7 @@ function Inner() {
         };
       case "campaign_kit":
         return {
+          schema: CampaignKitSchema,
           prompt: buildCampaignKitPrompt({
             campaign_name: campaignKitCfg.campaign_name.replace("{client}", brain.business_name),
             product: brain.business_name,
@@ -158,6 +174,18 @@ function Inner() {
   async function runBatch() {
     setError(null);
     if (!selected.size) return setError("Pick at least one client.");
+    // Batch is the single easiest way to blow a month's API budget — N clients
+    // x one call each, fired in parallel. Check the ceiling before firing any.
+    try {
+      const budget = await assertWithinBudget();
+      if (budget.warning && !budget.exceeded) {
+        setError(
+          `Heads up: $${budget.spentUsd.toFixed(2)} of $${budget.limitUsd.toFixed(2)} monthly budget used. Running ${selected.size} more generation${selected.size === 1 ? "" : "s"}.`
+        );
+      }
+    } catch (e: any) {
+      return setError(e?.message ?? "Monthly budget reached.");
+    }
     setRunning(true);
     abortRef.current = new AbortController();
     const signal = abortRef.current.signal;
@@ -194,13 +222,37 @@ function Inner() {
               },
             }
           );
-          const cost = estimateCostUsd(res.providerId, res.modelId, res.usage);
-          addUsage(cost, res.usage?.input_tokens ?? 0, res.usage?.output_tokens ?? 0);
+          let cost = estimateCostUsd(res.providerId, res.modelId, res.usage);
+          let inTokens = res.usage?.input_tokens ?? 0;
+          let outTokens = res.usage?.output_tokens ?? 0;
           // Empty-text fallback — Gemini in particular occasionally returns
           // res.text="" even when streaming worked correctly. Use accumulated
           // buffer so saved ads always have content.
-          const finalText = res.text || accumulated;
-          const json = tryParseJson<any>(finalText);
+          let finalText = res.text || accumulated;
+
+          // Schema validation with one corrective round-trip, matching
+          // GeneratorShell. Batch used to blind-trust tryParseJson, so the
+          // "no false results" guarantee didn't apply to the one surface that
+          // fans a single prompt across every client at once.
+          let json: any = null;
+          let recovered = false;
+          const v = await validateOrRetry({
+            schema: built.schema,
+            raw: finalText,
+            system,
+            originalPrompt: built.prompt,
+            signal,
+            maxTokens: built.max,
+          });
+          json = v.data;
+          recovered = v.recovered;
+          if (v.recovered) {
+            finalText = v.raw || finalText;
+            cost += v.costUsd;
+            inTokens += v.usage?.input_tokens ?? 0;
+            outTokens += v.usage?.output_tokens ?? 0;
+          }
+          addUsage(cost, inTokens, outTokens);
 
           const ad: GeneratedAd = {
             id: crypto.randomUUID(),
@@ -212,21 +264,42 @@ function Inner() {
             output_json: json,
             output_text: finalText,
             model_id: res.modelId,
-            usage_input_tokens: res.usage?.input_tokens ?? 0,
-            usage_output_tokens: res.usage?.output_tokens ?? 0,
+            usage_input_tokens: inTokens,
+            usage_output_tokens: outTokens,
             cost_usd: cost,
             starred: false,
             status: "draft",
             notes: "Generated via /batch · multi-client mode",
             created_at: Date.now(),
+            prompt: built.prompt,
+            provider_id: res.providerId,
           };
           await saveAd(ad);
 
           setResults((cur) =>
-            cur.map((r, idx) => (idx === i ? { ...r, status: "done", ad_id: ad.id, text: res.text, json } : r))
+            cur.map((r, idx) =>
+              // `finalText`, NOT `res.text`: on providers that return an empty
+              // res.text after a successful stream, using res.text here blanked
+              // the panel the instant the row flipped to "done" — the user
+              // watched their output vanish even though the ad saved fine.
+              idx === i ? { ...r, status: "done", ad_id: ad.id, text: finalText, json, recovered } : r
+            )
           );
         } catch (e: any) {
-          setResults((cur) => cur.map((r, idx) => (idx === i ? { ...r, status: "error", error: e?.message ?? "Failed" } : r)));
+          // A user-initiated Stop is not an error — surfacing the raw
+          // "signal is aborted without reason" DOM exception on every row made
+          // a deliberate cancel look like a batch-wide failure.
+          const aborted = e?.name === "AbortError" || signal.aborted;
+          const message = aborted
+            ? "Cancelled."
+            : e instanceof StructuredLlmError
+              ? `${e.message} Try a different provider — Claude / GPT / Gemini are most reliable for structured output.`
+              : e?.message ?? "Failed";
+          setResults((cur) =>
+            cur.map((r, idx) =>
+              idx === i ? { ...r, status: aborted ? "cancelled" : "error", error: message } : r
+            )
+          );
         }
       })
     );
@@ -236,6 +309,7 @@ function Inner() {
 
   const doneCount = results.filter((r) => r.status === "done").length;
   const errCount = results.filter((r) => r.status === "error").length;
+  const cancelledCount = results.filter((r) => r.status === "cancelled").length;
 
   return (
     <div>
@@ -441,7 +515,11 @@ function Inner() {
             </div>
           ) : (
             <>
-              <Section title={`Batch · ${doneCount}/${results.length} done${errCount ? ` · ${errCount} failed` : ""}`}>
+              <Section
+                title={`Batch · ${doneCount}/${results.length} done${errCount ? ` · ${errCount} failed` : ""}${
+                  cancelledCount ? ` · ${cancelledCount} cancelled` : ""
+                }`}
+              >
                 <ul className="space-y-2">
                   {results.map((r) => (
                     <BatchRow key={r.brain_id} r={r} />
@@ -480,6 +558,14 @@ function BatchRow({ r }: { r: RunResult }) {
           }`}
         />
         <span className="font-medium text-ink flex-1">{r.brain_name}</span>
+        {r.recovered ? (
+          <span
+            className="text-[9px] font-mono uppercase tracking-ui-mega text-live border border-live/40 px-1.5 py-0.5"
+            title="The model's first reply didn't match the expected structure, so it was automatically re-asked to correct the JSON. This content came from the second attempt."
+          >
+            ↻ auto-corrected
+          </span>
+        ) : null}
         {r.status === "done" ? (
           <>
             {open ? <ChevronDown size={12} className="text-ink-faint" /> : <ChevronRight size={12} className="text-ink-faint" />}
@@ -492,6 +578,8 @@ function BatchRow({ r }: { r: RunResult }) {
           </>
         ) : r.status === "error" ? (
           <Pill text="failed" tone="neg" />
+        ) : r.status === "cancelled" ? (
+          <Pill text="cancelled" />
         ) : (
           <Pill text="queued" />
         )}
@@ -514,6 +602,11 @@ function BatchRow({ r }: { r: RunResult }) {
       ) : null}
       {r.status === "error" && r.error ? (
         <div className="border-t border-base-700 px-3 py-2 text-[11px] text-neg">{r.error}</div>
+      ) : null}
+      {r.status === "cancelled" ? (
+        <div className="border-t border-base-700 px-3 py-2 text-[11px] text-ink-muted">
+          Cancelled before this client finished. Nothing was saved for it.
+        </div>
       ) : null}
     </li>
   );
