@@ -37,6 +37,14 @@ export function isPrivateOrLoopbackHost(hostname: string): boolean {
   // expose instance metadata + IAM credentials on EC2. Hard block.
   if (/^169\.254\./.test(h)) return true;
   if (/^0\./.test(h)) return true;
+  // 100.64.0.0/10 — carrier-grade NAT (RFC 6598). Used for internal service
+  // meshes (Tailscale, some k8s CNIs, several cloud providers' internal
+  // ranges), so it's reachable-but-private from a hosted deployment.
+  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(h)) return true;
+  // 192.0.0.0/24 (IETF protocol assignments) and 198.18.0.0/15 (benchmarking)
+  // are also non-public and occasionally routed internally.
+  if (/^192\.0\.0\./.test(h)) return true;
+  if (/^198\.1[89]\./.test(h)) return true;
   if (h === "::1" || h === "::") return true;
   // IPv6 link-local (fe80::/10) and unique-local (fc00::/7).
   if (/^fe[89ab][0-9a-f]:/i.test(h)) return true;

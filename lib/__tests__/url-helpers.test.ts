@@ -92,6 +92,31 @@ describe("isPrivateOrLoopbackHost — SSRF guard", () => {
   it("blocks empty / nullish hostnames defensively", () => {
     expect(isPrivateOrLoopbackHost("")).toBe(true);
   });
+
+  it("blocks carrier-grade NAT 100.64.0.0/10 (RFC 6598)", () => {
+    // Reachable-but-private from a hosted deployment: Tailscale, several k8s
+    // CNIs, and some cloud providers' internal service ranges live here.
+    expect(isPrivateOrLoopbackHost("100.64.0.1")).toBe(true);
+    expect(isPrivateOrLoopbackHost("100.100.100.200")).toBe(true);
+    expect(isPrivateOrLoopbackHost("100.127.255.255")).toBe(true);
+  });
+
+  it("does NOT over-block the public parts of 100.0.0.0/8", () => {
+    // The CGNAT range is only 100.64–100.127. Everything else is public.
+    expect(isPrivateOrLoopbackHost("100.63.255.255")).toBe(false);
+    expect(isPrivateOrLoopbackHost("100.128.0.1")).toBe(false);
+    expect(isPrivateOrLoopbackHost("100.7.1.1")).toBe(false);
+  });
+
+  it("blocks IETF protocol assignments (192.0.0.0/24) and benchmarking (198.18.0.0/15)", () => {
+    expect(isPrivateOrLoopbackHost("192.0.0.8")).toBe(true);
+    expect(isPrivateOrLoopbackHost("198.18.0.1")).toBe(true);
+    expect(isPrivateOrLoopbackHost("198.19.255.254")).toBe(true);
+    // Neighbouring public space must stay allowed.
+    expect(isPrivateOrLoopbackHost("192.0.1.1")).toBe(false);
+    expect(isPrivateOrLoopbackHost("198.20.0.1")).toBe(false);
+    expect(isPrivateOrLoopbackHost("198.17.0.1")).toBe(false);
+  });
 });
 
 describe("extractMetadata", () => {

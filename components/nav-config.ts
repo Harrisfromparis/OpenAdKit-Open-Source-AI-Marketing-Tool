@@ -13,19 +13,35 @@ export interface NavGroup {
 /**
  * Sidebar is grouped by PLATFORM so users pick "where am I running ads"
  * first, then see every tool that applies. Cross-platform tools (CTR
- * Optimizer, Hashtags, Content Calendar, etc.) intentionally appear in
+ * Optimizer, Hashtags, Creative Score, etc.) intentionally appear in
  * multiple platform groups — the tool itself has a platform select, but
  * discovery happens by platform.
  *
- * Setup / Insights / Routines / Learn / Data stay as universal groups
- * at the top + bottom of the list.
+ * THAT DUPLICATION HAS TO EARN ITS KEEP. A repeated entry is only justified if
+ * it lands the user on the tool with their platform already selected; a link
+ * that is byte-identical in four groups is just four ways to reach the same
+ * blank form. So every duplicate below carries a `query` when its target has a
+ * platform field, and the ones whose targets DON'T (landing-page,
+ * content-calendar) are the only identical repeats left.
+ *
+ * ⚠️ `query` values must be a real `value:` from that page's platform select.
+ * A value with no matching <option> renders a blank dropdown — which is what
+ * `platform=Google` did on Bid Strategy (its options are "Google Ads" /
+ * "Meta Ads" / "TikTok Ads"). Check the page's config before adding one.
+ *
+ * All groups start COLLAPSED. Twelve groups expanded on load pushed the useful
+ * items below the fold and made the sidebar a wall of ~80 links; collapsed, the
+ * whole information architecture fits on one screen. Sidebar.tsx still
+ * auto-expands whichever group contains the current route, so the active item
+ * is never hidden.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Start here",
-    defaultOpen: true,
     items: [
       { href: "/", label: "Dashboard" },
+      { href: "/how-to-use", label: "How to use OpenAdKit" },
+      { href: "/providers", label: "Which AI should I use?" },
       { href: "/brand", label: "Clients · Brand Brain" },
       { href: "/brand/new", label: "+ Add new client" },
       { href: "/suggestions", label: "✨ AI Suggestions" },
@@ -38,21 +54,20 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Meta · Facebook + Instagram",
-    defaultOpen: true,
     items: [
       { href: "/generate/meta", label: "Meta Ads · Feed/Reels" },
       { href: "/generate/reel-ideas", label: "Reel Ideas", query: "platform=instagram_reels" },
-      { href: "/generate/lead-form", label: "Lead Form" },
-      { href: "/generate/hashtags", label: "Hashtags" },
+      { href: "/generate/lead-form", label: "Lead Form", query: "platform=meta" },
+      { href: "/generate/hashtags", label: "Hashtags", query: "platform=instagram" },
       { href: "/generate/content-calendar", label: "Content Calendar" },
-      { href: "/generate/creative-prompts", label: "Image / Video Prompts" },
+      { href: "/generate/creative-prompts", label: "Image / Video Prompts", query: "platform=Meta+Feed" },
       { href: "/optimize/ctr", label: "CTR Optimizer", query: "platform=Meta+Feed" },
-      { href: "/optimize/creative-score", label: "Creative Score" },
-      { href: "/optimize/audience", label: "Audience Targeting" },
-      { href: "/optimize/ad-fatigue", label: "Ad Fatigue" },
-      { href: "/optimize/ab-test", label: "A/B Test Planner" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=Meta+Feed" },
+      { href: "/optimize/audience", label: "Audience Targeting", query: "platform=meta" },
+      { href: "/optimize/ad-fatigue", label: "Ad Fatigue", query: "platform=Meta+Feed" },
+      { href: "/optimize/ab-test", label: "A/B Test Planner", query: "platform=Meta+Feed" },
       { href: "/optimize/landing-page", label: "Landing Page" },
-      { href: "/optimize/bid-strategy", label: "Bid Strategy" },
+      { href: "/optimize/bid-strategy", label: "Bid Strategy", query: "platform=Meta+Ads" },
     ],
   },
   {
@@ -61,14 +76,17 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/generate/google", label: "Google Search · RSA" },
       { href: "/generate/google-pmax", label: "Performance Max" },
       { href: "/generate/google-shopping", label: "Shopping" },
-      { href: "/generate/display", label: "Display banners" },
+      { href: "/generate/display", label: "Display Banners" },
       { href: "/optimize/quality-score", label: "Quality Score Improver" },
       { href: "/optimize/keywords", label: "Keyword Builder" },
-      { href: "/optimize/bid-strategy", label: "Bid Strategy", query: "platform=Google" },
+      // Was `platform=Google` — not one of this tool's options, so the select
+      // rendered blank. The valid value is "Google Ads".
+      { href: "/optimize/bid-strategy", label: "Bid Strategy", query: "platform=Google+Ads" },
       { href: "/optimize/ctr", label: "CTR Optimizer", query: "platform=Google+Search" },
-      { href: "/optimize/audience", label: "Audience Targeting" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=Google+Search" },
+      { href: "/optimize/audience", label: "Audience Targeting", query: "platform=google" },
       { href: "/optimize/landing-page", label: "Landing Page" },
-      { href: "/optimize/ab-test", label: "A/B Test Planner" },
+      { href: "/optimize/ab-test", label: "A/B Test Planner", query: "platform=Google+Search" },
     ],
   },
   {
@@ -78,24 +96,27 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/generate/reel-ideas", label: "Reel Ideas", query: "platform=tiktok" },
       { href: "/generate/spark-ads", label: "Spark Ads" },
       { href: "/generate/branded-hashtag-challenge", label: "Branded Hashtag Challenge" },
-      { href: "/generate/hashtags", label: "Hashtags" },
+      { href: "/generate/hashtags", label: "Hashtags", query: "platform=tiktok" },
       { href: "/generate/content-calendar", label: "Content Calendar" },
-      { href: "/generate/creative-prompts", label: "Image / Video Prompts" },
+      { href: "/generate/creative-prompts", label: "Image / Video Prompts", query: "platform=TikTok+In-Feed" },
       { href: "/optimize/ctr", label: "CTR Optimizer", query: "platform=TikTok+In-Feed" },
-      { href: "/optimize/creative-score", label: "Creative Score" },
-      { href: "/optimize/audience", label: "Audience Targeting" },
-      { href: "/optimize/ad-fatigue", label: "Ad Fatigue" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=TikTok+In-Feed" },
+      { href: "/optimize/audience", label: "Audience Targeting", query: "platform=tiktok" },
+      { href: "/optimize/ad-fatigue", label: "Ad Fatigue", query: "platform=TikTok+In-Feed" },
+      { href: "/optimize/bid-strategy", label: "Bid Strategy", query: "platform=TikTok+Ads" },
     ],
   },
   {
     title: "LinkedIn · B2B",
     items: [
       { href: "/generate/linkedin", label: "LinkedIn Sponsored" },
-      { href: "/generate/lead-form", label: "Lead Form" },
+      { href: "/generate/lead-form", label: "Lead Form", query: "platform=linkedin" },
+      { href: "/generate/hashtags", label: "Hashtags", query: "platform=linkedin" },
       { href: "/optimize/ctr", label: "CTR Optimizer", query: "platform=LinkedIn+Sponsored" },
-      { href: "/optimize/audience", label: "Audience Targeting" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=LinkedIn+Sponsored" },
+      { href: "/optimize/audience", label: "Audience Targeting", query: "platform=linkedin" },
       { href: "/optimize/landing-page", label: "Landing Page" },
-      { href: "/optimize/ab-test", label: "A/B Test Planner" },
+      { href: "/optimize/ab-test", label: "A/B Test Planner", query: "platform=LinkedIn" },
     ],
   },
   {
@@ -103,16 +124,19 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/generate/youtube", label: "YouTube · TrueView Scripts" },
       { href: "/generate/reel-ideas", label: "Shorts Ideas", query: "platform=youtube_shorts" },
-      { href: "/generate/hashtags", label: "Hashtags" },
-      { href: "/generate/creative-prompts", label: "Image / Video Prompts" },
-      { href: "/optimize/creative-score", label: "Creative Score" },
+      { href: "/generate/hashtags", label: "Hashtags", query: "platform=youtube" },
+      { href: "/generate/creative-prompts", label: "Image / Video Prompts", query: "platform=YouTube+Shorts" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=YouTube+In-Stream" },
+      { href: "/optimize/ad-fatigue", label: "Ad Fatigue", query: "platform=YouTube+In-Stream" },
     ],
   },
   {
     title: "X · Twitter",
     items: [
       { href: "/generate/twitter", label: "Twitter / X Ads" },
-      { href: "/generate/hashtags", label: "Hashtags" },
+      { href: "/generate/hashtags", label: "Hashtags", query: "platform=twitter" },
+      { href: "/generate/creative-prompts", label: "Image / Video Prompts", query: "platform=Twitter+/+X" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=Twitter/X" },
       { href: "/generate/content-calendar", label: "Content Calendar" },
     ],
   },
@@ -121,6 +145,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/generate/email-subjects", label: "Email Subjects" },
       { href: "/generate/display", label: "Display Banners" },
+      { href: "/generate/creative-prompts", label: "Image / Video Prompts", query: "platform=Google+Display" },
+      { href: "/optimize/creative-score", label: "Creative Score", query: "platform=Google+Display" },
     ],
   },
   {

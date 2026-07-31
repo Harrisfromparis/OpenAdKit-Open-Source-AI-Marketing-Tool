@@ -39,3 +39,7 @@ TEST-SCENARIOS.md
 test-results/
 playwright-report/
 .playwright/
+
+# Local dev server logs (created by manual next start)
+server.log
+server.err.log

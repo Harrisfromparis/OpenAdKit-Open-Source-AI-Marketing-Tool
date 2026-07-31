@@ -13,6 +13,8 @@ import { getActiveProviderId, getActiveModelId, getProviderKey } from "./setting
 
 export { LLMError } from "./providers";
 export type { LLMCallOptions, LLMResult, LLMUsage, LLMMessage, StreamHandlers } from "./providers";
+import type { KeyCheckResult } from "./providers/types";
+export type { KeyCheckResult } from "./providers/types";
 
 export function getActiveProvider(): Provider | null {
   const id = getActiveProviderId();
@@ -29,6 +31,13 @@ interface RunOptions {
   providerOverride?: Provider;
   modelOverride?: string;
   apiKeyOverride?: string;
+  /**
+   * Request system-prompt prefix caching. Defaults to true: OpenAdKit's system
+   * prompt is the brand brain + framework stack, which is byte-identical across
+   * every generation for a given brand — an ideal (and large) cache prefix.
+   * Providers without caching support ignore it.
+   */
+  cacheSystem?: boolean;
 }
 
 function resolve(opts: RunOptions): { provider: Provider; apiKey: string; model: string } {
@@ -52,6 +61,7 @@ export async function llmCall(opts: RunOptions): Promise<LLMResult & { providerI
     maxTokens: opts.maxTokens,
     temperature: opts.temperature,
     signal: opts.signal,
+    cacheSystem: opts.cacheSystem ?? true,
   });
   recordRequest(provider.id);
   return { ...res, providerId: provider.id };
@@ -68,6 +78,7 @@ export async function llmStream(opts: RunOptions, handlers: StreamHandlers): Pro
       maxTokens: opts.maxTokens,
       temperature: opts.temperature,
       signal: opts.signal,
+      cacheSystem: opts.cacheSystem ?? true,
     },
     handlers
   );
@@ -138,8 +149,28 @@ export async function streamClaude(opts: LegacyOpts, handlers: StreamHandlers = 
   );
 }
 
-export async function testApiKey(apiKey: string, providerId?: string): Promise<boolean> {
+/**
+ * Verify a key against the provider and return WHY it failed, not just whether.
+ *
+ * Prefer this over testApiKey(). The boolean version cannot distinguish "wrong
+ * key" from "rate limited" / "provider down" / "our catalog names a dead
+ * model" — and treating all of those as "invalid key" leads users to delete
+ * keys that work.
+ */
+export async function verifyApiKey(apiKey: string, providerId?: string): Promise<KeyCheckResult> {
   const provider = providerId ? getProvider(providerId) : getActiveProvider();
-  if (!provider) return false;
+  if (!provider) {
+    return { ok: false, authenticated: false, message: "No provider selected." };
+  }
+  if (!apiKey.trim()) {
+    return { ok: false, authenticated: false, message: "Paste a key first." };
+  }
   return provider.testKey(apiKey);
+}
+
+/** @deprecated Boolean shim for legacy callers — use verifyApiKey() so the
+ *  reason for a failure survives. */
+export async function testApiKey(apiKey: string, providerId?: string): Promise<boolean> {
+  const res = await verifyApiKey(apiKey, providerId);
+  return res.ok;
 }

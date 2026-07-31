@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { getActiveBrainId, addUsage, getLanguage, getToneOverride, getActiveProviderId, getProvidersWithKeys, getProviderKey } from "@/lib/settings";
 import { llmStream, estimateCostUsd, tryParseJson } from "@/lib/llm";
 import { getProvider } from "@/lib/providers";
+import { getQuotaSnapshot } from "@/lib/quota-tracker";
 import { getBrain, saveAd, saveCampaign, type Campaign, type GeneratedAd } from "@/lib/storage";
 import { buildBrandSystemPrompt, type BrandBrain } from "@/lib/brand-brain";
 import { buildCampaignKitPrompt } from "@/lib/prompts/campaign-kit";
@@ -171,7 +172,13 @@ function Inner() {
       // through all 9 — that would mask real failures behind huge delays.
       if (wasTimeout) {
         const active = getActiveProviderId();
-        const fallbackId = getProvidersWithKeys().find((id) => id !== active);
+        // Skip providers we already know are throttled: quota-tracker records
+        // blocked_until whenever a 429 comes back with a Retry-After. Picking
+        // the first key blindly meant failing over straight into another
+        // rate-limited provider and burning a second 90s timeout.
+        const candidates = getProvidersWithKeys().filter((id) => id !== active);
+        const fallbackId =
+          candidates.find((id) => !(getQuotaSnapshot(id)?.blocked_for_seconds)) ?? candidates[0];
         const fallbackProvider = fallbackId ? getProvider(fallbackId) : null;
         if (fallbackProvider) {
           const fallbackKey = getProviderKey(fallbackId!);

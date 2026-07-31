@@ -25,11 +25,13 @@ jobs:
         run: npm run typecheck
       - name: Test
         run: npm test
+      - name: Lint
+        # Enforced. This was `continue-on-error: true`, which meant lint had
+        # never been able to fail a build — a permanently green check that
+        # signalled nothing.
+        run: npm run lint
       - name: Build
         run: npm run build
-      - name: Lint
-        run: npm run lint
-        continue-on-error: true
 
   smoke:
     # Runs the real-browser Playwright suite against a production build.

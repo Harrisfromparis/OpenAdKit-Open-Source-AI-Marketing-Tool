@@ -363,7 +363,7 @@ export function BrandBrainForm({ initial }: Props) {
         ...brain,
         name: brain.name || brain.business_name,
       };
-      await saveBrain(toSave);
+      await saveBrain(toSave, { reason: "before manual edit" });
       setActiveBrainId(toSave.id);
       window.dispatchEvent(new Event("ados:brains-changed"));
       router.push("/brand");

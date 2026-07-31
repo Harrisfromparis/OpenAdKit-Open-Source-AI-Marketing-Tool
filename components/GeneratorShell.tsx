@@ -8,15 +8,18 @@ import { PageHeader } from "@/components/PageHeader";
 import { CopyButton } from "@/components/CopyButton";
 import { useThrottledStream } from "@/lib/stream-hook";
 import { getApiKey, getModel, getActiveBrainId, addUsage, getLanguage, getToneOverride, getAutoSave } from "@/lib/settings";
-import { streamClaude, estimateCostUsd, tryParseJson, llmStream, llmCall } from "@/lib/llm";
+import { streamClaude, estimateCostUsd, tryParseJson, llmStream, llmCall, type LLMMessage } from "@/lib/llm";
 import { getProvider, type Provider } from "@/lib/providers";
 import { getProviderKey } from "@/lib/settings";
 import { getBrain, saveAd, type GeneratedAd } from "@/lib/storage";
 import { buildBrandSystemPrompt, type BrandBrain } from "@/lib/brand-brain";
 import { applySmartFill } from "@/lib/smart-fill";
 import { rememberLastGenerated, suggestNextSteps, type NextStep } from "@/lib/next-steps";
+import { assertWithinBudget } from "@/lib/budget";
+import { getQuotaSnapshot, formatCountdown } from "@/lib/quota-tracker";
+import { formatCost } from "@/lib/utils";
 import { ProviderSwitcher } from "@/components/ProviderSwitcher";
-import { providerSupportsVision, fileToImagePart, pickVisionProvider } from "@/lib/providers/vision";
+import { providerSupportsVision, fileToImagePart, pickVisionProvider, MAX_IMAGE_MB } from "@/lib/providers/vision";
 import { getActiveProviderId } from "@/lib/settings";
 import type { ContentPart, ImagePart } from "@/lib/providers/types";
 import Link from "next/link";
@@ -54,6 +57,16 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
   // auto-corrected via a retry round-trip. UI shows a small badge so the user
   // knows the result is valid but came from attempt #2. (No false results.)
   const [schemaRecovered, setSchemaRecovered] = useState(false);
+  // Usage for THIS run. The StatusBar only ever showed a lifetime total, so
+  // there was no way to see what a single generation actually cost you.
+  const [lastRun, setLastRun] = useState<{
+    inTokens: number;
+    outTokens: number;
+    cost: number;
+    modelId: string;
+    providerId: string;
+    retried: boolean;
+  } | null>(null);
   const [nextSteps, setNextSteps] = useState<NextStep[]>([]);
   const [fillToast, setFillToast] = useState<string | null>(null);
   const stream = useThrottledStream();
@@ -82,9 +95,9 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
       //     means — switching clients shouldn't leave the previous client's
       //     industry / audience / etc. in the form.
       if (opts.resetForm) {
-        setInput(applyQueryOverrides(applySmartFill(config.fields, config.initial, b), searchParams));
+        setInput(applyQueryOverrides(applySmartFill(config.fields, config.initial, b), searchParams, config.fields));
       } else {
-        setInput((cur) => applyQueryOverrides(applySmartFill(config.fields, cur, b), searchParams));
+        setInput((cur) => applyQueryOverrides(applySmartFill(config.fields, cur, b), searchParams, config.fields));
       }
     };
     loadBrain();
@@ -125,6 +138,7 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
     setSavedId(null);
     setParsed(null);
     setSchemaRecovered(false);
+    setLastRun(null);
     stream.reset();
 
     // Validate required fields. Image fields are required if their value is null.
@@ -141,6 +155,20 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
     const apiKey = getApiKey();
     if (!apiKey) {
       setError("No API key. Add one in Settings.");
+      return;
+    }
+
+    // Monthly spend ceiling. Advisory by default; only blocks when the user
+    // explicitly enabled the hard stop in Settings.
+    try {
+      const budget = await assertWithinBudget();
+      if (budget.warning && !budget.exceeded) {
+        setWarning(
+          `Budget: $${budget.spentUsd.toFixed(2)} of $${budget.limitUsd.toFixed(2)} used this month ($${budget.remainingUsd.toFixed(2)} left).`
+        );
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "Monthly budget reached.");
       return;
     }
 
@@ -217,7 +245,11 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
         : await streamClaude(
             {
               apiKey,
-              model: getModel(),
+              // `|| undefined` matters: getModel() returns "" when no provider
+              // is active, and an empty string passed as modelOverride BEATS
+              // the provider's own default in resolve(), producing a 404 from
+              // the API instead of a clear error.
+              model: getModel() || undefined,
               system,
               messages: [{ role: "user", content }],
               maxTokens: config.maxTokens ?? 3000,
@@ -229,8 +261,14 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
 
       // Three-arg form so vision-fallback runs (which route via a different provider than the
       // active one) bill against the correct pricing table. (Audit finding #8.)
-      const cost = estimateCostUsd(res.providerId, res.modelId, res.usage);
-      addUsage(cost, res.usage?.input_tokens ?? 0, res.usage?.output_tokens ?? 0);
+      // These are mutable: a schema-correction retry below adds its own cost and
+      // tokens, and the SAVED AD must reflect the true total. Previously the
+      // retry was added to the global usage counter but not to `ad.cost_usd`,
+      // so per-ad spend under-reported every time a correction pass ran.
+      let cost = estimateCostUsd(res.providerId, res.modelId, res.usage);
+      let inTokens = res.usage?.input_tokens ?? 0;
+      let outTokens = res.usage?.output_tokens ?? 0;
+      addUsage(cost, inTokens, outTokens);
       window.dispatchEvent(new Event("ados:usage"));
 
       // Some providers (Gemini in particular) occasionally return res.text empty
@@ -264,39 +302,37 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
               .map((i: any) => `- ${i.path.join(".") || "<root>"}: ${i.message}`)
               .join("\n");
             try {
-              const retry = await (fallbackProvider
-                ? llmCall({
-                    system,
-                    messages: [
-                      { role: "user", content: prompt },
-                      { role: "assistant", content: (finalText || "").slice(0, 8000) },
-                      {
-                        role: "user",
-                        content: `Your previous reply did not match the required JSON shape. Fix these issues and return ONLY the corrected JSON — no prose, no markdown, no code fences:\n\n${issues}`,
-                      },
-                    ],
-                    maxTokens: config.maxTokens ?? 3000,
-                    temperature: 0.2,
-                    signal: controller.signal,
-                    providerOverride: fallbackProvider,
-                    apiKeyOverride: fallbackKey,
-                  })
-                : llmCall({
-                    system,
-                    messages: [
-                      { role: "user", content: prompt },
-                      { role: "assistant", content: (finalText || "").slice(0, 8000) },
-                      {
-                        role: "user",
-                        content: `Your previous reply did not match the required JSON shape. Fix these issues and return ONLY the corrected JSON — no prose, no markdown, no code fences:\n\n${issues}`,
-                      },
-                    ],
-                    maxTokens: config.maxTokens ?? 3000,
-                    temperature: 0.2,
-                    signal: controller.signal,
-                  }));
+              // Re-send the ORIGINAL content, not just the text prompt. On an
+              // image-based generator, passing `prompt` alone meant attempt #2
+              // reasoned about a screenshot it could no longer see — and then
+              // got blamed for returning the wrong shape again.
+              const retryMessages: LLMMessage[] = [
+                { role: "user", content },
+                { role: "assistant", content: (finalText || "").slice(0, 8000) },
+                {
+                  role: "user",
+                  content: `Your previous reply did not match the required JSON shape. Fix these issues and return ONLY the corrected JSON — no prose, no markdown, no code fences:\n\n${issues}`,
+                },
+              ];
+              const retry = await llmCall({
+                system,
+                messages: retryMessages,
+                maxTokens: config.maxTokens ?? 3000,
+                temperature: 0.2,
+                signal: controller.signal,
+                ...(fallbackProvider
+                  ? { providerOverride: fallbackProvider, apiKeyOverride: fallbackKey }
+                  : {}),
+              });
               const retryCost = estimateCostUsd(retry.providerId, retry.modelId, retry.usage);
-              addUsage(retryCost, retry.usage?.input_tokens ?? 0, retry.usage?.output_tokens ?? 0);
+              const retryIn = retry.usage?.input_tokens ?? 0;
+              const retryOut = retry.usage?.output_tokens ?? 0;
+              addUsage(retryCost, retryIn, retryOut);
+              // Roll into the per-ad totals so the saved record shows what this
+              // generation actually cost, retry included.
+              cost += retryCost;
+              inTokens += retryIn;
+              outTokens += retryOut;
               window.dispatchEvent(new Event("ados:usage"));
               const retried = tryParseJson(retry.text ?? "");
               const second = retried !== null ? config.schema.safeParse(retried) : null;
@@ -322,6 +358,18 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
         setParsed(json);
       }
 
+      // Record what this single run consumed, including any correction retry.
+      setLastRun({
+        inTokens,
+        outTokens,
+        cost,
+        modelId: res.modelId,
+        // streamClaude() is the legacy shim and types providerId as optional;
+        // fall back to the active provider so the strip never renders blank.
+        providerId: res.providerId ?? getActiveProviderId() ?? "",
+        retried: inTokens !== (res.usage?.input_tokens ?? 0),
+      });
+
       if (getAutoSave()) {
         // Never persist internal, double-underscore-prefixed keys (e.g. a former
         // vision-provider override). They're transient routing hints, not user
@@ -339,13 +387,17 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
           output_json: json,
           output_text: finalTextOut,
           model_id: res.modelId,
-          usage_input_tokens: res.usage?.input_tokens ?? 0,
-          usage_output_tokens: res.usage?.output_tokens ?? 0,
+          usage_input_tokens: inTokens,
+          usage_output_tokens: outTokens,
           cost_usd: cost,
           starred: false,
           status: "draft",
           notes: "",
           created_at: Date.now(),
+          // Enables regenerate-and-compare from /history against a different
+          // model without the history page needing every generator's builder.
+          prompt,
+          provider_id: res.providerId,
         };
         await saveAd(ad);
         setSavedId(ad.id);
@@ -497,7 +549,7 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
         </section>
 
         <section className="lg:col-span-3 space-y-4">
-          <OutputArea running={running} stream={stream.text} parsed={parsed} config={config as unknown as GeneratorConfig<Record<string, unknown>>} hasRun={hasRun} lastError={error} schemaRecovered={schemaRecovered} />
+          <OutputArea running={running} stream={stream.text} parsed={parsed} config={config as unknown as GeneratorConfig<Record<string, unknown>>} hasRun={hasRun} lastError={error} schemaRecovered={schemaRecovered} lastRun={lastRun} />
           {savedId && nextSteps.length ? <NextStepsPanel steps={nextSteps} /> : null}
         </section>
       </div>
@@ -511,17 +563,27 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
  * `/optimize/ctr?platform=Meta+Feed&ad_id=...` are safe to pass through unknown
  * params (ad_id, brand_id) without polluting form state.
  *
+ * The config-field check is load-bearing and used to be missing: every query
+ * param was written into form state regardless of whether the generator had a
+ * matching field, and those junk keys were then persisted into the saved ad's
+ * `input` blob.
+ *
  * Skipped if `?carry=0` is passed (used to force-reset the form).
  */
 function applyQueryOverrides<I extends Record<string, unknown>>(
   current: I,
-  searchParams: URLSearchParams | null
+  searchParams: URLSearchParams | null,
+  fields: InputField[]
 ): I {
   if (!searchParams) return current;
   if (searchParams.get("carry") === "0") return current;
+  const allowed = new Set(fields.map((f) => f.name));
   const next: any = { ...current };
   for (const [key, val] of searchParams.entries()) {
-    if (key === "ad_id" || key === "brand_id" || key === "carry") continue;
+    if (!allowed.has(key)) continue;
+    // Image fields hold an ImagePart object — a string from the URL would be
+    // silently wrong (and would fail the `required` check in a confusing way).
+    if (fields.find((f) => f.name === key)?.kind === "image") continue;
     if (val) next[key] = val;
   }
   return next as I;
@@ -685,7 +747,7 @@ function ImageInput({
         disabled={busy}
         className="w-full border border-dashed border-base-600 bg-base-900/30 hover:border-base-500 hover:bg-base-800/40 transition px-3 py-4 text-xs text-ink-muted"
       >
-        {busy ? "Reading image…" : placeholder ?? "Drop a screenshot here or click to upload (PNG / JPEG / WebP / GIF · ≤ 4.5 MB)"}
+        {busy ? "Reading image…" : placeholder ?? `Drop a screenshot here or click to upload (PNG / JPEG / WebP / GIF · ≤ ${MAX_IMAGE_MB} MB)`}
       </button>
       <input
         ref={inputRef}
@@ -735,6 +797,55 @@ function FrameworkMetaPill({ json }: { json: any }) {
   );
 }
 
+/** Live countdown while a provider has us rate-limited, driven by the
+ *  retry-after the provider itself returned (recorded in quota-tracker). */
+function RateLimitCountdown() {
+  const [secs, setSecs] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => {
+      const snap = getQuotaSnapshot(getActiveProviderId());
+      setSecs(snap?.blocked_for_seconds ?? null);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (!secs || secs <= 0) return null;
+  return (
+    <p className="text-[12px] text-ink">
+      Retry available in <span className="text-live font-medium tabular">{formatCountdown(secs)}</span>.
+    </p>
+  );
+}
+
+/** What this single generation consumed. */
+function UsageStrip({
+  run,
+}: {
+  run: { inTokens: number; outTokens: number; cost: number; modelId: string; retried: boolean };
+}) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono uppercase tracking-ui-wide border border-base-700 bg-base-900/30 px-2 py-1.5 text-ink-faint">
+      <span>this run</span>
+      <span className="text-ink-faint">·</span>
+      <span className="text-ink tabular">{run.inTokens.toLocaleString()} in</span>
+      <span className="text-ink-faint">·</span>
+      <span className="text-ink tabular">{run.outTokens.toLocaleString()} out</span>
+      <span className="text-ink-faint">·</span>
+      <span className="text-ink tabular">{(run.inTokens + run.outTokens).toLocaleString()} total</span>
+      <span className="text-ink-faint">·</span>
+      <span className="text-live tabular font-medium">{formatCost(run.cost)}</span>
+      <span className="text-ink-faint">·</span>
+      <span className="text-ink-subtle normal-case tracking-normal">{run.modelId}</span>
+      {run.retried ? (
+        <span className="text-live" title="Includes a schema-correction retry, which cost extra tokens.">
+          · incl. retry
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
   running,
   stream,
@@ -743,6 +854,7 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
   hasRun,
   lastError,
   schemaRecovered,
+  lastRun,
 }: {
   running: boolean;
   stream: string;
@@ -751,6 +863,7 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
   hasRun: boolean;
   lastError?: string | null;
   schemaRecovered?: boolean;
+  lastRun?: { inTokens: number; outTokens: number; cost: number; modelId: string; providerId: string; retried: boolean } | null;
 }) {
   // Detect a rate-limit error from common provider phrasings so we can give a
   // direct, actionable message instead of generic "your key may be invalid".
@@ -775,11 +888,18 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
           <div className="text-[10px] font-mono uppercase tracking-ui-mega text-live flex items-center gap-2">
             <span className="h-1 w-1 bg-live" /> rate-limit hit (free-tier quota)
           </div>
-          <p className="text-sm text-ink leading-relaxed">
-            Provider rejected with: <code className="text-[11px] font-mono text-live bg-base-900/60 px-1 py-0.5">{lastError}</code>
-          </p>
+          {/* The provider's OWN words, verbatim — not a paraphrase. */}
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">
+              message returned by the provider
+            </div>
+            <pre className="text-[11px] font-mono text-live bg-base-900/60 px-2 py-1.5 whitespace-pre-wrap leading-relaxed">
+              {lastError}
+            </pre>
+          </div>
+          <RateLimitCountdown />
           <p className="text-[12px] text-ink-muted leading-relaxed">
-            Your API key works fine — you've hit the per-minute / daily quota. Either wait the retry-in seconds shown above, or switch provider now:
+            Your API key works fine — you've hit the per-minute / daily quota. Wait for the countdown, or switch provider now:
           </p>
           <ProviderSwitcher reason="rate-limit" />
         </div>
@@ -791,9 +911,14 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
           <span className="h-1 w-1 bg-neg" /> empty response
         </div>
         {lastError ? (
-          <p className="text-sm text-ink leading-relaxed">
-            Provider error: <code className="text-[11px] font-mono text-neg bg-base-900/60 px-1 py-0.5">{lastError}</code>
-          </p>
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">
+              message returned by the provider
+            </div>
+            <pre className="text-[11px] font-mono text-neg bg-base-900/60 px-2 py-1.5 whitespace-pre-wrap leading-relaxed">
+              {lastError}
+            </pre>
+          </div>
         ) : (
           <>
             <p className="text-sm text-ink leading-relaxed">
@@ -826,6 +951,10 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
             ↻ ai output auto-corrected (schema retry)
           </div>
         ) : null}
+        {/* Above the output, not below it — generator results run long, and a
+            cost readout you have to scroll past the whole result to find is a
+            cost readout nobody reads. */}
+        {lastRun ? <UsageStrip run={lastRun} /> : null}
         {config.renderJson(parsed)}
         <div className="flex items-center justify-end gap-2">
           <CopyButton text={stream} label="copy raw output" />
@@ -872,6 +1001,7 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
       <pre className={`text-xs whitespace-pre-wrap font-mono leading-relaxed text-ink ${running ? "caret" : ""}`}>
         {stream || "…"}
       </pre>
+      {!running && lastRun ? <div className="mt-3"><UsageStrip run={lastRun} /></div> : null}
     </div>
   );
 });

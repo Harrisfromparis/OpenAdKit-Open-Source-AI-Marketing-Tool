@@ -1,8 +1,9 @@
 /**
  * Web-side client for the local-sync sidecar (scripts/local-sync.cjs).
  *
- * Auto-detects the sidecar at http://localhost:3006. When available:
- *   - On app start, fetches data/snapshot.json and merges into IndexedDB + localStorage
+ * Auto-detects the sidecar via lib/sync-endpoint.ts, which resolves the port
+ * the launcher actually chose instead of assuming 3006. When available:
+ *   - On app start, fetches the snapshot and merges into IndexedDB + localStorage
  *   - On every brain/ad/campaign change, debounce-pushes the full snapshot back
  *
  * If the sidecar isn't running, this whole module no-ops silently — the app
@@ -12,11 +13,8 @@
  */
 
 import { isHostedMode } from "./env";
+import { resolveSyncOrigin, getSyncOrigin } from "./sync-endpoint";
 
-// 127.0.0.1 instead of "localhost" so IPv6-preferring systems (some Windows
-// configs) don't resolve to ::1 while the sidecar listens on 127.0.0.1 only.
-// Matches url-ingest.ts. (Audit finding #49.)
-const SYNC_URL = "http://127.0.0.1:3006";
 const SYNC_DEBOUNCE_MS = 1500;
 const LS_INCLUDE_KEYS = "ados.sync_include_keys";
 const LS_LAST_SYNC = "ados.sync_last_at";
@@ -34,13 +32,9 @@ export async function detectSync(): Promise<boolean> {
   // Only cache a POSITIVE probe. A failed probe must not pin `false` forever —
   // a sidecar started after page load should still be detectable on re-probe.
   if (_available === true) return true;
-  try {
-    const r = await fetch(`${SYNC_URL}/health`, { method: "GET", cache: "no-store" });
-    if (r.ok) _available = true;
-    return r.ok;
-  } catch {
-    return false;
-  }
+  const origin = await resolveSyncOrigin();
+  if (origin) _available = true;
+  return Boolean(origin);
 }
 
 export function isSyncIncludingKeys(): boolean {
@@ -77,6 +71,7 @@ interface Snapshot {
   templates?: unknown[];
   checklist?: unknown[];
   custom_items?: unknown[];
+  brain_versions?: unknown[];
   prefs?: Record<string, string>;
   keys?: Record<string, string>; // only present if user opts in
 }
@@ -111,13 +106,23 @@ async function buildSnapshot(): Promise<Snapshot> {
     templates: parsed.templates,
     checklist: parsed.checklist,
     custom_items: parsed.custom_items,
+    brain_versions: parsed.brain_versions,
     prefs: collectPrefs(),
   };
 }
 
 async function applySnapshot(snap: Snapshot): Promise<void> {
   if (!snap || typeof snap !== "object") return;
-  if (snap.prefs && isBrowser()) {
+  // Preferences are restored ONLY when the snapshot is newer than our last
+  // successful push. Previously every pref was overwritten on every page load,
+  // unconditionally — so changing your model (or budget, language, tone) and
+  // navigating within the 1.5s push debounce silently reverted it, and two open
+  // tabs could fight over settings indefinitely. Data (brains/ads) still merges
+  // every time; only the small last-write-wins prefs bag is gated.
+  const snapshotAt = Number(snap.exported_at) || 0;
+  const lastLocalPush = getLastSyncAt();
+  const snapshotIsNewer = snapshotAt > lastLocalPush;
+  if (snap.prefs && isBrowser() && snapshotIsNewer) {
     try {
       for (const [k, v] of Object.entries(snap.prefs)) {
         if (typeof v === "string") window.localStorage.setItem(k, v);
@@ -134,6 +139,7 @@ async function applySnapshot(snap: Snapshot): Promise<void> {
       templates: snap.templates ?? [],
       checklist: snap.checklist ?? [],
       custom_items: snap.custom_items ?? [],
+      brain_versions: snap.brain_versions ?? [],
     })
   );
   // Reconcile active brain: if the snapshot restored an active_brain ID that points
@@ -154,7 +160,7 @@ export async function pullSnapshot(): Promise<{ ok: boolean; merged: boolean; by
   const ok = await detectSync();
   if (!ok) return { ok: false, merged: false, reason: "sync sidecar not running" };
   try {
-    const r = await fetch(`${SYNC_URL}/snapshot`, { method: "GET", cache: "no-store" });
+    const r = await fetch(`${getSyncOrigin()}/snapshot`, { method: "GET", cache: "no-store" });
     if (!r.ok) return { ok: false, merged: false, reason: `sidecar returned ${r.status}` };
     const snap = (await r.json()) as Snapshot;
     if (snap && (snap.brains?.length || snap.ads?.length || snap.campaigns?.length)) {
@@ -182,7 +188,7 @@ export async function pushSnapshotNow(): Promise<{ ok: boolean; bytes?: number; 
       try {
         const snap = await buildSnapshot();
         const body = JSON.stringify(snap);
-        const r = await fetch(`${SYNC_URL}/snapshot`, {
+        const r = await fetch(`${getSyncOrigin()}/snapshot`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,

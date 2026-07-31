@@ -8,6 +8,7 @@ import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { CommandPalette } from "@/components/CommandPalette";
 import { UndoToast } from "@/components/UndoToast";
 import { LocalSyncBoot } from "@/components/LocalSyncBoot";
+import { VaultGate } from "@/components/VaultGate";
 
 const sans = Manrope({
   subsets: ["latin"],
@@ -32,8 +33,26 @@ const display = Instrument_Serif({
 const SEO_DESCRIPTION =
   "Free open-source alternative to Jasper, AdCreative & Anyword. 18 AI ad generators, 9 providers (BYOK), browser-only, zero subscriptions. MIT-licensed.";
 
+/**
+ * Canonical origin for OG images, canonicals and JSON-LD.
+ *
+ * Hardcoding the author's domain meant every self-hosted deployment and every
+ * fork emitted OG/canonical URLs pointing back at openadkit.dicecodes.com —
+ * so shared links previewed someone else's site, and canonicals told search
+ * engines the fork was a duplicate. Resolve from the environment, falling back
+ * to the public instance for the canonical deploy.
+ */
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : "") ||
+  "https://openadkit.dicecodes.com"
+).replace(/\/+$/, "");
+
+/** Kept in sync with package.json — this shipped as "0.1.0" long after 1.0.0. */
+const APP_VERSION = "1.1.0";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://openadkit.dicecodes.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "OpenAdKit — Open Source AI Marketing Tool · BYOK · Free Forever",
     template: "%s · OpenAdKit",
@@ -142,10 +161,10 @@ const STRUCTURED_DATA = {
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
     },
-    url: "https://openadkit.dicecodes.com",
+    url: SITE_URL,
     sameAs: ["https://github.com/IamRamgarhia/AdForge"],
     license: "https://opensource.org/licenses/MIT",
-    softwareVersion: "0.1.0",
+    softwareVersion: APP_VERSION,
     description: SEO_DESCRIPTION,
     featureList: [
       "18 AI ad copy generators across Google, Meta, TikTok, LinkedIn, YouTube, X",
@@ -167,7 +186,7 @@ const STRUCTURED_DATA = {
     "@type": "Organization",
     name: "Dicecodes",
     url: "https://dicecodes.com",
-    logo: "https://openadkit.dicecodes.com/icon.svg",
+    logo: `${SITE_URL}/icon.svg`,
     sameAs: ["https://github.com/IamRamgarhia"],
   },
   faq: {
@@ -269,15 +288,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to main content
         </a>
-        <div className="flex min-h-screen">
+        {/* App shell: the viewport is the frame, and the two panes scroll
+            independently inside it.
+
+            `h-dvh overflow-hidden` pins the shell to exactly one screen so the
+            PAGE never scrolls. The sidebar owns its own scrollbar (see
+            Sidebar's <nav>) and the main canvas owns its own (#main-scroll
+            below), which means the nav stays put while you read a long
+            generation, and scrolling a 12-item nav group doesn't drag the
+            content with it. Previously `min-h-screen` let the whole document
+            grow, so the sidebar scrolled off the top of the page and its
+            `flex-1 overflow-y-auto` never actually engaged.
+
+            dvh (not vh) so mobile browser chrome collapsing doesn't leave a
+            dead strip under the status bar. */}
+        <div className="flex h-dvh overflow-hidden">
           <Sidebar />
           <MobileNav />
           <ServiceWorkerRegister />
           <LocalSyncBoot />
           <CommandPalette />
           <UndoToast />
-          <main id="main-content" className="flex-1 min-w-0 flex flex-col">
-            <div className="flex-1 px-4 md:px-10 pt-14 md:pt-6 pb-14">{children}</div>
+          <main id="main-content" className="flex-1 min-w-0 flex flex-col overflow-hidden">
+            <VaultGate />
+            <div id="main-scroll" className="flex-1 overflow-y-auto overscroll-contain px-4 md:px-10 pt-14 md:pt-6 pb-10">
+              {children}
+            </div>
             <StatusBar />
           </main>
         </div>

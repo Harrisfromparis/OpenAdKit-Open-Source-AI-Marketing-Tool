@@ -42,7 +42,11 @@ describe("estimateCostUsd — provider-aware pricing", () => {
   });
 
   it("returns 0 for a free OpenRouter model", () => {
-    const cost = estimateCostUsd("openrouter", "meta-llama/llama-3.3-70b-instruct:free", {
+    // Must name a model that's actually IN the catalog, otherwise findModel()
+    // returns null and this passes for the wrong reason — it would report 0 for
+    // a paid model too. (The old fixture used a model since withdrawn from
+    // OpenRouter, which made this assertion vacuous.)
+    const cost = estimateCostUsd("openrouter", "google/gemma-4-31b-it:free", {
       input_tokens: 100_000,
       output_tokens: 50_000,
     });

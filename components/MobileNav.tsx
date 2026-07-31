@@ -18,23 +18,37 @@ export function MobileNav() {
   }, [path]);
 
   useEffect(() => {
+    // The app shell pins the page to one viewport, so <body> no longer scrolls —
+    // the scroll region is #main-scroll. Locking only body would leave the
+    // content scrolling behind the open drawer.
+    const scroller = document.getElementById("main-scroll");
+    const lock = (on: boolean) => {
+      const v = on ? "hidden" : "";
+      document.body.style.overflow = v;
+      if (scroller) scroller.style.overflow = on ? "hidden" : "";
+    };
     if (open) {
-      document.body.style.overflow = "hidden";
+      lock(true);
       // Move focus into the dialog so keyboard users land inside instead of
       // being stranded on the now-hidden hamburger trigger.
       closeRef.current?.focus();
+      // Capture the trigger node NOW. Reading triggerRef.current inside the
+      // cleanup would read whatever it points at when the effect tears down —
+      // by then React may have unmounted or replaced that node, so focus would
+      // go nowhere and keyboard users would be dumped back at the page root.
+      const trigger = triggerRef.current;
       const onKey = (e: KeyboardEvent) => {
         if (e.key === "Escape") setOpen(false);
       };
       window.addEventListener("keydown", onKey);
       return () => {
-        document.body.style.overflow = "";
+        lock(false);
         window.removeEventListener("keydown", onKey);
         // Return focus to the trigger when the drawer closes.
-        triggerRef.current?.focus();
+        trigger?.focus();
       };
     }
-    document.body.style.overflow = "";
+    lock(false);
   }, [open]);
 
   return (

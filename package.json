@@ -1,6 +1,6 @@
 {
   "name": "openadkit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "OpenAdKit — open source AI marketing tool. Every ad platform, every AI provider (BYOK), runs in your browser, zero subscriptions. Built by Dicecodes.",
   "license": "MIT",
@@ -37,12 +37,14 @@
     "og:render": "node scripts/render-og.cjs",
     "screenshots": "node scripts/capture-screenshots.cjs",
     "setup:github": "node scripts/setup-github.cjs",
+    "models:check": "node scripts/check-models.cjs",
     "start": "next start -p 3005",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:smoke": "playwright test tests/smoke.spec.ts --reporter=line"
+    "test:smoke": "playwright test tests/smoke.spec.ts --reporter=line",
+    "test:live": "playwright test tests/live.spec.ts --reporter=line"
   },
   "dependencies": {
     "clsx": "2.1.1",

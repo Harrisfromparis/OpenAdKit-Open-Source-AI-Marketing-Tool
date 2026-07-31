@@ -33,13 +33,31 @@ export function findModel(providerId: string | null, modelId: string | null) {
   return p.models.find((m) => m.id === modelId) ?? null;
 }
 
-export function estimateCostUsd(providerId: string, modelId: string, usage: { input_tokens?: number; output_tokens?: number } | null): number {
+export function estimateCostUsd(
+  providerId: string,
+  modelId: string,
+  usage: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  } | null
+): number {
   if (!usage) return 0;
   const m = findModel(providerId, modelId);
   if (!m) return 0;
+  const inRate = m.pricing.input_per_million_usd;
+  const outRate = m.pricing.output_per_million_usd;
+  // Prompt-caching multipliers: writes cost ~1.25x base input, reads ~0.1x.
+  // `input_tokens` already excludes cached tokens, so these are additive —
+  // without them a cache-heavy run under-reports spend. (See lib/providers/anthropic.ts.)
+  const cacheWrite = (usage.cache_creation_input_tokens ?? 0) * inRate * 1.25;
+  const cacheRead = (usage.cache_read_input_tokens ?? 0) * inRate * 0.1;
   return (
-    ((usage.input_tokens ?? 0) * m.pricing.input_per_million_usd +
-      (usage.output_tokens ?? 0) * m.pricing.output_per_million_usd) /
+    ((usage.input_tokens ?? 0) * inRate +
+      (usage.output_tokens ?? 0) * outRate +
+      cacheWrite +
+      cacheRead) /
     1_000_000
   );
 }

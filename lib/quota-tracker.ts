@@ -152,24 +152,13 @@ export function getQuotaSnapshot(providerId: string | undefined | null): QuotaSn
   };
 }
 
-/** Resolve documented free-tier limits for the provider so the UI can show
- *  "X / Y used" instead of just "X requests". Hardcoded from
- *  lib/provider-limits.ts — duplicated here to avoid an import cycle and to
- *  keep the values close to the parsing code. */
-export function getProviderLimitCaps(providerId: string): { rpm: number | null; rpd: number | null } {
-  switch (providerId) {
-    case "google": return { rpm: 15, rpd: 1500 };
-    case "groq": return { rpm: 30, rpd: 14400 };
-    case "cerebras": return { rpm: 30, rpd: null };
-    case "openrouter": return { rpm: 20, rpd: 50 };
-    case "anthropic": return { rpm: 50, rpd: null };
-    case "openai": return { rpm: 500, rpd: null };
-    case "deepseek": return { rpm: 60, rpd: null };
-    case "mistral": return { rpm: 60, rpd: null };
-    case "together": return { rpm: null, rpd: null };
-    default: return { rpm: null, rpd: null };
-  }
-}
+/** Free-tier caps, re-exported from the single source of truth.
+ *
+ *  These used to be a second hardcoded copy here, justified by an import cycle
+ *  that doesn't exist (provider-limits.ts imports nothing). The copies had
+ *  drifted: this one still claimed Google allowed 1,500 requests/day, which a
+ *  live 429 disproved (~20/day on gemini-3.6-flash). */
+export { getProviderLimitCaps } from "./provider-limits";
 
 /** Format a seconds count as "12s" / "3m" / "1h 22m". For countdown displays. */
 export function formatCountdown(seconds: number): string {

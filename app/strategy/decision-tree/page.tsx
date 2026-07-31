@@ -139,73 +139,56 @@ function Inner() {
       />
 
       <div className="space-y-4 stagger">
-        <Step
-          done={!!p.goal}
-          n={1}
-          title="Goal"
-          desc="What is this campaign actually for?"
-          children={
-            <Grid>
-              {GOALS.map((g) => (
-                <Choice key={g.v} active={p.goal === g.v} onClick={() => setP({ ...p, goal: g.v })}>
-                  <div className="text-ink font-medium">{g.t}</div>
-                  <div className="text-[11px] text-ink-muted mt-0.5">{g.d}</div>
-                </Choice>
-              ))}
-            </Grid>
-          }
-        />
+        <Step done={!!p.goal} n={1} title="Goal" desc="What is this campaign actually for?">
+          <Grid>
+            {GOALS.map((g) => (
+              <Choice key={g.v} active={p.goal === g.v} onClick={() => setP({ ...p, goal: g.v })}>
+                <div className="text-ink font-medium">{g.t}</div>
+                <div className="text-[11px] text-ink-muted mt-0.5">{g.d}</div>
+              </Choice>
+            ))}
+          </Grid>
+        </Step>
         {p.goal ? (
           <Step
             done={!!p.budget}
             n={2}
             title="Monthly budget"
             desc="Be honest. Mismatched budget is the #1 cause of bad results."
-            children={
-              <Grid cols={4}>
-                {BUDGETS.map((b) => (
-                  <Choice key={b.v} active={p.budget === b.v} onClick={() => setP({ ...p, budget: b.v })}>
-                    <div className="text-ink font-medium text-sm">{b.t}</div>
-                  </Choice>
-                ))}
-              </Grid>
-            }
-          />
+          >
+            <Grid cols={4}>
+              {BUDGETS.map((b) => (
+                <Choice key={b.v} active={p.budget === b.v} onClick={() => setP({ ...p, budget: b.v })}>
+                  <div className="text-ink font-medium text-sm">{b.t}</div>
+                </Choice>
+              ))}
+            </Grid>
+          </Step>
         ) : null}
         {p.budget ? (
-          <Step
-            done={!!p.product}
-            n={3}
-            title="What are you selling?"
-            children={
-              <Grid>
-                {PRODUCTS.map((pp) => (
-                  <Choice key={pp.v} active={p.product === pp.v} onClick={() => setP({ ...p, product: pp.v })}>
-                    <div className="text-ink font-medium">{pp.t}</div>
-                  </Choice>
-                ))}
-              </Grid>
-            }
-          />
+          <Step done={!!p.product} n={3} title="What are you selling?">
+            <Grid>
+              {PRODUCTS.map((pp) => (
+                <Choice key={pp.v} active={p.product === pp.v} onClick={() => setP({ ...p, product: pp.v })}>
+                  <div className="text-ink font-medium">{pp.t}</div>
+                </Choice>
+              ))}
+            </Grid>
+          </Step>
         ) : null}
         {p.product ? (
-          <Step
-            done={!!p.timeline}
-            n={4}
-            title="Timeline pressure"
-            children={
-              <Grid cols={2}>
-                <Choice active={p.timeline === "fast"} onClick={() => setP({ ...p, timeline: "fast" })}>
-                  <div className="text-ink font-medium">Need results in 30 days</div>
-                  <div className="text-[11px] text-ink-muted">Skew toward intent-based + manual control</div>
-                </Choice>
-                <Choice active={p.timeline === "patient"} onClick={() => setP({ ...p, timeline: "patient" })}>
-                  <div className="text-ink font-medium">Building for 6+ months</div>
-                  <div className="text-[11px] text-ink-muted">Smart bidding + creative pipeline + retargeting infra</div>
-                </Choice>
-              </Grid>
-            }
-          />
+          <Step done={!!p.timeline} n={4} title="Timeline pressure">
+            <Grid cols={2}>
+              <Choice active={p.timeline === "fast"} onClick={() => setP({ ...p, timeline: "fast" })}>
+                <div className="text-ink font-medium">Need results in 30 days</div>
+                <div className="text-[11px] text-ink-muted">Skew toward intent-based + manual control</div>
+              </Choice>
+              <Choice active={p.timeline === "patient"} onClick={() => setP({ ...p, timeline: "patient" })}>
+                <div className="text-ink font-medium">Building for 6+ months</div>
+                <div className="text-[11px] text-ink-muted">Smart bidding + creative pipeline + retargeting infra</div>
+              </Choice>
+            </Grid>
+          </Step>
         ) : null}
         {result ? <Result result={result} reset={() => setP({})} /> : null}
       </div>
