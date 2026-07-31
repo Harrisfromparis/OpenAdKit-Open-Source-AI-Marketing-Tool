@@ -1,6 +1,6 @@
 # OpenAdKit one-line installer for Windows (PowerShell)
 # Usage from any PowerShell window:
-#   iwr -useb https://raw.githubusercontent.com/IamRamgarhia/AdForge/main/install.ps1 | iex
+#   iwr -useb https://raw.githubusercontent.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/main/install.ps1 | iex
 #
 # Does everything in one go:
 #   1. Checks for Node.js + git (installs via winget if missing)
@@ -22,7 +22,7 @@ Write-Host " OpenAdKit installer - by Dicecodes" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
 # --- Defaults ---
-$Repo    = "https://github.com/IamRamgarhia/AdForge.git"
+$Repo    = "https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool.git"
 $Branch  = "main"
 $Target  = Join-Path $env:USERPROFILE "OpenAdKit"
 

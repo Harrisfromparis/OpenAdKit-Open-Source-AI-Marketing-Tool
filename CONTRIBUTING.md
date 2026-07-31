@@ -1,12 +1,12 @@
-# Contributing to AdForge
+# Contributing to OpenAdKit
 
-Thanks for thinking about contributing. AdForge is browser-only, BYOK, open source. There is no backend to deploy, no secrets to share, and no telemetry — meaning every contribution lands in production the moment it's merged. That focuses the work nicely.
+Thanks for thinking about contributing. OpenAdKit is browser-only, BYOK, open source. There is no backend to deploy, no secrets to share, and no telemetry — meaning every contribution lands in production the moment it's merged. That focuses the work nicely.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/YOUR_GITHUB/adOS.git
-cd adOS
+git clone https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool.git openadkit
+cd openadkit
 npm install
 npm run dev
 ```
@@ -44,7 +44,7 @@ That's it. The `GeneratorShell` handles streaming, character counts, history sav
 
 ## Prompt engineering conventions
 
-These are the patterns AdForge prompts follow. Borrow them when adding new ones:
+These are the patterns OpenAdKit prompts follow. Borrow them when adding new ones:
 
 1. **Self-counted char limits with overage flags.** Every length-constrained field in the JSON schema should include a `chars` field and a `status: "ok"|"over"` field, with a `trimmed_alt` for overages. Don't trust the model to silently respect limits.
 2. **Declare angles first.** For ad-copy prompts, require the model to emit an `angles[]` array before writing variants. Variants reference angles by label.
@@ -75,15 +75,15 @@ These are the patterns AdForge prompts follow. Borrow them when adding new ones:
 ## Privacy & security
 
 - Never log or store the API key outside `localStorage`.
-- Never add any `fetch()` to a server you don't fully trust. The only outbound call AdForge makes is to `api.anthropic.com`.
+- Never add any `fetch()` to a server you don't fully trust. The only outbound calls OpenAdKit makes are to the API host of whichever AI provider the user selected (see `lib/providers/`), plus the optional URL reader used by brand extraction.
 - Don't ship any analytics or feature flag SDK.
 
 ## PR checklist
 
 - [ ] `npm run typecheck` passes
 - [ ] `npm run build` passes
-- [ ] Tested in browser with a real Claude key
-- [ ] No new outbound network calls except `api.anthropic.com`
+- [ ] Tested in browser with a real provider key (any of the 9 — Groq and Gemini have free tiers)
+- [ ] No new outbound network calls except the selected provider's API host
 - [ ] No new env vars (BYOK only — there are no server secrets)
 - [ ] Prompts include character-limit self-validation
 - [ ] No new fonts loaded from external CDN (use `next/font`)

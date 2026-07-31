@@ -168,7 +168,7 @@ export default function AlternativesPage() {
           lock-in. <Link href="/" className="text-live underline">Try the cockpit</Link> or
           {" "}
           <a
-            href="https://github.com/IamRamgarhia/AdForge"
+            href="https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool"
             className="text-live underline"
             target="_blank"
             rel="noreferrer"

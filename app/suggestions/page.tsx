@@ -248,7 +248,7 @@ function SuggestionsOutput({ json }: { json: any }) {
                 ) : null}
                 {c.adOS_workflow?.length ? (
                   <div className="mt-3 pt-3 border-t border-base-700">
-                    <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1.5">your workflow in adOS</div>
+                    <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1.5">your workflow in OpenAdKit</div>
                     <div className="flex flex-wrap gap-2">
                       {c.adOS_workflow.map((w: any, j: number) => (
                         <Link key={j} href={w.url} className="btn-ghost text-[11px]">

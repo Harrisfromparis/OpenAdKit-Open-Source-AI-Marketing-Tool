@@ -162,7 +162,7 @@ const STRUCTURED_DATA = {
       availability: "https://schema.org/InStock",
     },
     url: SITE_URL,
-    sameAs: ["https://github.com/IamRamgarhia/AdForge"],
+    sameAs: ["https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool"],
     license: "https://opensource.org/licenses/MIT",
     softwareVersion: APP_VERSION,
     description: SEO_DESCRIPTION,

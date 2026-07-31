@@ -11,13 +11,13 @@
 *The open-source alternative to Jasper, AdCreative, Anyword, Pencil & Copy.ai · runs in your browser · MIT-licensed · built by [Dicecodes](https://dicecodes.com)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-ffb020.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-ffb020.svg)](CHANGELOG.md)
 [![Node 18.17+](https://img.shields.io/badge/node-%E2%89%A518.17-brightgreen.svg)](https://nodejs.org)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org)
 [![Built by Dicecodes](https://img.shields.io/badge/built%20by-Dicecodes-ffb020.svg)](https://dicecodes.com)
 [![Browser-only](https://img.shields.io/badge/browser--only-yes-blue.svg)](#privacy--security)
 [![BYOK](https://img.shields.io/badge/BYOK-9%20providers-purple.svg)](#9-ai-providers-supported)
-[![GitHub stars](https://img.shields.io/github/stars/IamRamgarhia/AdForge?style=social)](https://github.com/IamRamgarhia/AdForge/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool?style=social)](https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/stargazers)
 
 **One tool. Every ad platform. Zero subscriptions.**
 *Your key · your data · your folder.*
@@ -30,7 +30,7 @@
 [vs Jasper / AdCreative / Anyword / Copy.ai](#openadkit-vs-jasper-adcreative-anyword-copyai--feature-comparison) ·
 [FAQ](#frequently-asked-questions) ·
 [Architecture](#architecture) ·
-[Star this repo ⭐](https://github.com/IamRamgarhia/AdForge/stargazers)
+[Star this repo ⭐](https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/stargazers)
 
 </div>
 
@@ -145,6 +145,31 @@ This is the **only paid thing** in OpenAdKit, and it can be $0 if you pick a fre
 
 > 💡 You can add multiple provider keys and switch between them anytime in [Settings](#) — useful when you hit a free-tier rate limit, just one-click swap to another provider.
 
+#### Which AI gives the most free credits? (built into the app at `/providers`)
+
+Not sure which provider to pick? OpenAdKit ships a **"Which AI should I use?"** page that compares
+every provider's free tier, real cost per generation, and image support side by side — and adds a
+**measured** column from your own usage.
+
+| Provider | Free tier | Free requests/day | Card needed | Image input |
+|---|---|---|---|---|
+| **Groq** | Yes | **14,400** | No | No |
+| **OpenRouter** (`:free` models) | Yes | 50 | No | Yes |
+| **Cerebras** | Yes | 30/min, no daily cap published | No | No |
+| **Google Gemini** | Yes | **~20 per model** | No | Yes |
+| Anthropic Claude · OpenAI GPT · DeepSeek · Mistral · Together AI | Paid | — | Yes | Claude/GPT only |
+
+**Best free option for volume: Groq** — 14,400 requests/day with no credit card. **Watch out for
+Gemini:** its free limits are counted *per model*, and `gemini-3.6-flash` allows only about **20
+requests/day** — the Flash-Lite models are far more generous. These are measured and published
+figures, not estimates.
+
+**On "which AI writes better ads": we don't claim to know, and neither should anyone else.** There is
+no ground truth for ad copy, so a quality ranking would be invented. What the app does instead is
+measure **retry rate** — how often a provider's first reply failed schema validation and had to be
+re-asked. That is observable, it doubles your token cost when it happens, and it is computed from
+your own generation history.
+
 ### Step 3 · Add your first brand (3 minutes)
 
 This is OpenAdKit's killer feature. **You paste one URL, the AI extracts a complete brand profile in 30 seconds.**
@@ -229,8 +254,8 @@ Pick the one that fits you. Both are 100% free, BYOK, and store your work in you
 
 Deploy your own private instance to Vercel or Cloudflare in one click. Free tier covers it easily.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIamRamgarhia%2FAdForge)
-[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2FIamRamgarhia%2FAdForge)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIamRamgarhia%2FOpenAdKit-Open-Source-AI-Marketing-Tool)
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2FIamRamgarhia%2FOpenAdKit-Open-Source-AI-Marketing-Tool)
 
 What you get: your own URL (`yourname.vercel.app`), nothing to install, works on any device with a browser including mobile + tablet. The app auto-detects hosted mode and uses a built-in `/api/ingest` route (server-side fetch for the URL reader) instead of the local sidecar. **Storage is browser-only IndexedDB** — click *Settings → Export* periodically to back up to a JSON file.
 
@@ -242,12 +267,12 @@ You need **Node.js 20+** ([download here](https://nodejs.org/en/download)). That
 
 **Windows** (PowerShell):
 ```powershell
-iwr -useb https://raw.githubusercontent.com/IamRamgarhia/AdForge/main/scripts/install/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/main/scripts/install/install.ps1 | iex
 ```
 
 **macOS / Linux / WSL**:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/IamRamgarhia/AdForge/main/scripts/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/main/scripts/install/install.sh | bash
 ```
 
 That single command: installs Node + git if missing (Windows uses winget), clones the repo into `~/OpenAdKit`, runs `npm install`, asks for a port, then opens the launcher control panel in your browser. Click **▶ Start OpenAdKit** and you're live.
@@ -262,7 +287,7 @@ To shut everything down: close the launcher tab and run `scripts\stop.bat` (or j
 
 ### Manual · Mac / Linux · 2 commands
 ```bash
-git clone https://github.com/IamRamgarhia/AdForge.git openadkit && cd openadkit
+git clone https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool.git openadkit && cd openadkit
 bash OpenAdKit.command             # first run installs + creates Desktop shortcut · subsequent runs just launch
 # bash scripts/stop.sh           # to force-stop later
 ```
@@ -312,6 +337,7 @@ Pick where you're running ads first ("I'm doing Meta this week"), then see every
 | **Email + Display** | Email Subjects · Display Banners | — |
 
 ### Flagship features
+- **🤖 Which AI should I use?** (`/providers`) — compare all 9 AI providers on free-tier limits, real cost per generation, and image support, plus a *measured* view of your own usage: generations run, total spend, and how often each provider's output failed validation and had to be re-asked. Ships no invented quality scores.
 - **⚡ 10-Minute Launch Wizard** (`/launch/wizard`) — single click → strategy brief + cross-platform ad copy + content calendar + 3-email sequence + launch-day social posts. One Campaign, five chained AI calls, streaming live.
 - **Multi-Client Batch Mode** (`/batch`) — pick N clients → generate the same asset (Content Calendar / Hashtags / Reel Ideas / Campaign Kit) for all in parallel. Each output uses that client's own brand brain so voice is preserved per-client.
 - **Reel Idea Generator** (`/generate/reel-ideas`) — 10 proven hook formulas rotated across a batch (POV / Contradiction / Listicle / Number-Promise / Pattern-Interrupt / Before-After / Story / Demo / Controversy / Insider) with platform-native rules baked in for IG Reels / TikTok / Shorts / FB Reels.
@@ -623,7 +649,7 @@ The launcher checks GitHub once per page load for new commits on `main` and surf
 | **No destructive ops** | No `git reset --hard`, no `--force`, no `--no-verify`. If something's wrong, your state is preserved. |
 | **Single in-flight** | Only one update job at a time. The button locks until the current one finishes. |
 | **Observable** | Live log streams during apply. After success: "Reload launcher" button (manual — never auto-reloads). |
-| **Source of truth** | GitHub REST API at `/repos/IamRamgarhia/AdForge/commits/main`. No auth needed (public repo). |
+| **Source of truth** | GitHub REST API at `/repos/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/commits/main`. No auth needed (public repo). |
 | **Data safe** | Your `data/snapshot.json` is never touched by the update. Brand brains, generated ads, campaigns, and history all survive. |
 
 **If the banner says "Working tree has uncommitted changes":** you've modified files locally. Either `git add . && git commit -m "my changes"` or `git stash`, then click **Update now** again.
@@ -666,7 +692,7 @@ This is a stale `.next/` build-cache problem — usually caused by running `npm 
 
 ### Reporting a bug
 
-Click **⚠ Report a problem on GitHub** in the launcher — it pre-fills [github.com/IamRamgarhia/AdForge/issues/new](https://github.com/IamRamgarhia/AdForge/issues/new) with your platform, Node version, port config, and recent log lines. Add what you were trying to do and submit.
+Click **⚠ Report a problem on GitHub** in the launcher — it pre-fills [github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/issues/new](https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/issues/new) with your platform, Node version, port config, and recent log lines. Add what you were trying to do and submit.
 
 ---
 

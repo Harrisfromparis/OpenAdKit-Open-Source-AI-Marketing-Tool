@@ -1,6 +1,6 @@
 # NOTICE — Sources & Attribution
 
-AdForge is MIT-licensed. The prompts shipped in `lib/prompts/` are informed by — and in some places quote verbatim from — these public, MIT-licensed open-source projects. We list them here both to give credit and so users can trace any rule back to its source.
+OpenAdKit is MIT-licensed. The prompts shipped in `lib/prompts/` are informed by — and in some places quote verbatim from — these public, MIT-licensed open-source projects. We list them here both to give credit and so users can trace any rule back to its source.
 
 ## Primary sources
 
@@ -46,9 +46,9 @@ SEO + paid audit skills. Patterns borrowed:
 
 ## License compatibility
 
-All borrowed patterns come from MIT or Apache-2.0 licensed sources. AdForge itself is MIT. Verbatim quotes are limited to the **rules and structural patterns**, not the project's code — and we re-write everything in our own prompt voice except where a rule is quoted (like Copycat's combinability clause, which is short, factual, and not creative expression).
+All borrowed patterns come from MIT or Apache-2.0 licensed sources. OpenAdKit itself is MIT. Verbatim quotes are limited to the **rules and structural patterns**, not the project's code — and we re-write everything in our own prompt voice except where a rule is quoted (like Copycat's combinability clause, which is short, factual, and not creative expression).
 
-If you maintain one of these projects and want different attribution or wish for us to remove a pattern, open an issue at https://github.com/YOUR_GITHUB/adOS/issues — we'll respond within 7 days.
+If you maintain one of these projects and want different attribution or wish for us to remove a pattern, open an issue at https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/issues — we'll respond within 7 days.
 
 ## Platform specs
 

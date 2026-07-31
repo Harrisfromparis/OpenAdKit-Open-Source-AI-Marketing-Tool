@@ -36,7 +36,7 @@
 
 ## Key URLs
 
-- GitHub repository: https://github.com/IamRamgarhia/AdForge
+- GitHub repository: https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool
 - Hosted demo: https://openadkit.dicecodes.com
 - Built by: Dicecodes (https://dicecodes.com)
 - License: MIT (https://opensource.org/licenses/MIT)

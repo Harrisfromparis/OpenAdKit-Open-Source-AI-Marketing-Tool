@@ -251,7 +251,7 @@ function Inner() {
           ))}
         </div>
         <p className="text-[10px] font-mono uppercase tracking-ui-wide text-ink-subtle mt-3 leading-relaxed">
-          adOS never calls these libraries directly · they open in a new tab in your own browser · zero data goes through us
+          OpenAdKit never calls these libraries directly · they open in a new tab in your own browser · zero data goes through us
         </p>
       </Section>
 

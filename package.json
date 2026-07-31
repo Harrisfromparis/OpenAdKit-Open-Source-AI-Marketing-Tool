@@ -4,10 +4,10 @@
   "private": true,
   "description": "OpenAdKit — open source AI marketing tool. Every ad platform, every AI provider (BYOK), runs in your browser, zero subscriptions. Built by Dicecodes.",
   "license": "MIT",
-  "homepage": "https://github.com/IamRamgarhia/AdForge",
+  "homepage": "https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool",
   "repository": {
     "type": "git",
-    "url": "https://github.com/IamRamgarhia/AdForge.git"
+    "url": "https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool.git"
   },
   "author": "Dicecodes <Contact@dicecodes.com>",
   "keywords": [

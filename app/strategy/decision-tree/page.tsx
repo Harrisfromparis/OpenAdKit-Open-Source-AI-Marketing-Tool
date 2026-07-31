@@ -247,7 +247,7 @@ function Result({ result, reset }: { result: any; reset: () => void }) {
       </div>
 
       <div className="mt-4 pt-4 border-t border-base-700">
-        <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-2">your workflow in adOS</div>
+        <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-2">your workflow in OpenAdKit</div>
         <div className="flex flex-wrap gap-2">
           {result.kit.map((href: string, i: number) => (
             <Link key={i} href={href} className="btn-primary">

@@ -138,7 +138,7 @@ function appendUpdateLog(line) {
   if (updateState.log.length > 200) updateState.log.shift();
   console.log(`[openadkit:update] ${line}`);
 }
-const GH_REPO = "IamRamgarhia/AdForge"; // public, no auth required
+const GH_REPO = "IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool"; // public, no auth required
 
 // --- Helpers ---
 function envPort(value, fallback) {
@@ -942,7 +942,7 @@ const server = http.createServer(async (req, res) => {
         const lib = u.protocol === "https:" ? require("https") : require("http");
         const opts = {
           headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; OpenAdKit/1.0; +https://github.com/IamRamgarhia/AdForge)",
+            "User-Agent": "Mozilla/5.0 (compatible; OpenAdKit/1.0; +https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool)",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
           },

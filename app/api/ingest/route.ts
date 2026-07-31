@@ -44,7 +44,7 @@ const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 15_000;
 const OUTPUT_CAP = 40_000;
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; OpenAdKit/1.0; +https://github.com/IamRamgarhia/AdForge)";
+  "Mozilla/5.0 (compatible; OpenAdKit/1.0; +https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool)";
 
 // --- Abuse control ---------------------------------------------------------
 // This route does a server-side fetch of any public URL. Without a limit,

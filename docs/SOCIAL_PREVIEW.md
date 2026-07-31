@@ -43,12 +43,12 @@ Use [opengraph.dev](https://opengraph.dev) or [bannerbear.com](https://bannerbea
 
 ## How to upload to GitHub
 
-1. Go to: <https://github.com/IamRamgarhia/AdForge/settings>
+1. Go to: <https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/settings>
 2. Scroll to **Social preview**
 3. Click **Edit** → drag the PNG in
 4. Save
 
-Verify by pasting `https://github.com/IamRamgarhia/AdForge` into <https://www.opengraph.xyz> after upload — you should see your custom card, not the GitHub default.
+Verify by pasting `https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool` into <https://www.opengraph.xyz> after upload — you should see your custom card, not the GitHub default.
 
 ## When to refresh
 

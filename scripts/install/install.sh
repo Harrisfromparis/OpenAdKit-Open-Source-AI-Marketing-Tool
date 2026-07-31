@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # OpenAdKit one-line installer for macOS / Linux / WSL
 # Usage from any terminal:
-#   curl -fsSL https://raw.githubusercontent.com/IamRamgarhia/AdForge/main/install-online.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/main/install-online.sh | bash
 #
 # Does everything in one go:
 #   1. Checks for Node.js + git (suggests install command if missing)
@@ -12,7 +12,7 @@
 
 set -e
 
-REPO="https://github.com/IamRamgarhia/AdForge.git"
+REPO="https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool.git"
 BRANCH="main"
 TARGET="${ADFORGE_DIR:-$HOME/OpenAdKit}"
 

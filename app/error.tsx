@@ -38,7 +38,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     ];
     const title = `Render error: ${(error?.message ?? "unknown").slice(0, 70)}`;
     const body = encodeURIComponent(lines.join("\n"));
-    const gh = `https://github.com/IamRamgarhia/AdForge/issues/new?labels=bug&title=${encodeURIComponent(title)}&body=${body}`;
+    const gh = `https://github.com/IamRamgarhia/OpenAdKit-Open-Source-AI-Marketing-Tool/issues/new?labels=bug&title=${encodeURIComponent(title)}&body=${body}`;
     window.open(gh, "_blank");
   }
 
