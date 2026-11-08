@@ -94,7 +94,7 @@ export async function resolveSyncOrigin(force = false): Promise<string | null> {
     try {
       const res = await fetch(`${origin}/health`, { method: "GET", cache: "no-store" });
       if (!res.ok) continue;
-      // Confirm it's actually an OpenAdKit sidecar and not some unrelated
+      // Confirm it's actually an Ad Studio sidecar and not some unrelated
       // service that happens to answer /health on that port.
       const body = await res.json().catch(() => null);
       if (!body || body.ok !== true) continue;

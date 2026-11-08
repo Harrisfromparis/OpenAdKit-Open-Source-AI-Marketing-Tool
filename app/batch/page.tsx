@@ -375,7 +375,7 @@ function Inner() {
                   key={k}
                   onClick={() => setAssetKind(k)}
                   className={`text-[12px] px-3 py-2 border transition text-left ${
-                    assetKind === k ? "border-live bg-live text-base-950 font-semibold" : "border-base-600 text-ink-muted hover:border-base-500"
+                    assetKind === k ? "border-live bg-live text-black font-semibold" : "border-base-600 text-ink-muted hover:border-base-500"
                   }`}
                 >
                   {label}

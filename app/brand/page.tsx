@@ -8,7 +8,8 @@ import { ApiKeyGate } from "@/components/ApiKeyGate";
 import { PageHeader } from "@/components/PageHeader";
 import { BrandBrainForm } from "@/components/BrandBrainForm";
 import { BrainVersionHistory } from "@/components/BrainVersionHistory";
-import { listBrains, softDeleteBrain, restoreBrain, getBrain, exportBrain, importBrain } from "@/lib/storage";
+import { listBrains, softDeleteBrain, restoreBrain, getBrain, exportBrain, importBrain, saveBrain } from "@/lib/storage";
+import { autismAndMeBrain } from "@/lib/autism-and-me-brain";
 import { showUndoToast } from "@/components/UndoToast";
 import { type BrandBrain } from "@/lib/brand-brain";
 import { setActiveBrainId, getActiveBrainId } from "@/lib/settings";
@@ -34,6 +35,15 @@ function BrandInner() {
   const [activeBrandId, setActiveBrandIdState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const importRef = useRef<HTMLInputElement>(null);
+
+  async function addAutismAndMe() {
+    const b = autismAndMeBrain();
+    await saveBrain(b, { reason: "Autism & Me starter profile" });
+    setActiveBrainId(b.id);
+    window.dispatchEvent(new Event("ados:brains-changed"));
+    window.dispatchEvent(new Event("ados:active-brain-changed"));
+    await refresh();
+  }
 
   async function refresh() {
     const list = await listBrains();
@@ -116,7 +126,7 @@ function BrandInner() {
       <PageHeader
         scope="brand"
         title="Clients"
-        subtitle="Your saved brand brains. Click a card to activate it — every tool across OpenAdKit auto-uses the active client's voice, audience, products, and pillars."
+        subtitle="Your saved brand brains. Click a card to activate it — every tool across Ad Studio auto-uses the active client's voice, audience, products, and pillars."
         actions={
           <div className="flex gap-2">
             <input
@@ -129,6 +139,11 @@ function BrandInner() {
             <button onClick={() => importRef.current?.click()} className="btn-ghost">
               <Upload size={12} /> import
             </button>
+            {!brains.some((b) => b.business_name === "Autism & Me") ? (
+              <button onClick={addAutismAndMe} className="btn-ghost">
+                <Plus size={12} /> Add the Autism &amp; Me profile
+              </button>
+            ) : null}
             <Link href="/brand/new" className="btn-primary">
               <Plus size={12} /> Add new client
             </Link>
@@ -145,13 +160,18 @@ function BrandInner() {
         // First-touch empty state — clear single path forward.
         <div className="border border-live/40 bg-live/[0.04] p-8 text-center">
           <div className="text-[10px] font-mono uppercase tracking-ui-mega text-live mb-2">no clients yet</div>
-          <h2 className="font-display italic text-3xl text-ink leading-tight mb-2">Add your first client to unlock every tool.</h2>
+          <h2 className="font-display font-semibold text-3xl text-ink leading-tight mb-2">Add your first client to unlock every tool.</h2>
           <p className="text-sm text-ink-muted max-w-xl mx-auto leading-relaxed mb-5">
-            OpenAdKit's brand brain is what makes every output sound like <em>this</em> client — not generic AI copy. Paste a website URL, search Google by name, or start from an industry template. AI extracts 90% of the intelligence in ~10 seconds; you cross-check and approve.
+            Ad Studio's brand brain is what makes every output sound like <em>this</em> client — not generic AI copy. Paste a website URL, search Google by name, or start from an industry template. AI extracts 90% of the intelligence in ~10 seconds; you cross-check and approve.
           </p>
-          <Link href="/brand/new" className="btn-primary text-base">
-            <Plus size={14} /> Add your first client
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button onClick={addAutismAndMe} className="btn-primary text-base">
+              <Plus size={14} /> Add the Autism &amp; Me profile
+            </button>
+            <Link href="/brand/new" className="btn-ghost text-base">
+              <Plus size={14} /> Add a different client
+            </Link>
+          </div>
         </div>
       ) : (
         <>
@@ -194,7 +214,7 @@ function BrandInner() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {isActive ? (
-                        <span className="text-[10px] font-mono uppercase tracking-ui-mega bg-live text-base-950 px-1.5 py-0.5 font-bold">
+                        <span className="text-[10px] font-mono uppercase tracking-ui-mega bg-live text-black px-1.5 py-0.5 font-bold">
                           ✓ active
                         </span>
                       ) : (
@@ -220,7 +240,7 @@ function BrandInner() {
                         brain {completeness.filled}/{completeness.total}
                       </span>
                     </div>
-                    <div className={`font-display italic text-xl ${isActive ? "text-live" : "text-ink"}`}>
+                    <div className={`font-display font-semibold text-xl ${isActive ? "text-live" : "text-ink"}`}>
                       {b.name || b.business_name}
                     </div>
                     {b.usp ? (

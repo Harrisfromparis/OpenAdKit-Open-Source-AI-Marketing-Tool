@@ -133,7 +133,7 @@ function PulseCard({ label, value, contrib, fix, tone }: { label: string; value:
   return (
     <div className="border border-base-600 bg-base-900/30 p-4">
       <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">{label}</div>
-      <div className={`font-display italic text-3xl mt-1 tabular ${toneMap[tone]}`}>{value}</div>
+      <div className={`font-display font-semibold text-3xl mt-1 tabular ${toneMap[tone]}`}>{value}</div>
       {contrib ? <div className="text-[11px] text-ink mt-2 leading-relaxed">{contrib}</div> : null}
       {fix ? <div className="text-[11px] text-pos mt-1 leading-relaxed">→ {fix}</div> : null}
     </div>

@@ -105,7 +105,7 @@ function CreativePromptOutput({ json }: { json: any }) {
     <div className="space-y-4 stagger">
       {json?.asset_intent_summary ? (
         <Section title="Intent">
-          <p className="font-display italic text-lg text-ink leading-relaxed">{json.asset_intent_summary}</p>
+          <p className="font-display font-semibold text-lg text-ink leading-relaxed">{json.asset_intent_summary}</p>
         </Section>
       ) : null}
 

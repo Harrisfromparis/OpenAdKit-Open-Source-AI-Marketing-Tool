@@ -72,7 +72,7 @@ function CalendarOutput({ json }: { json: any }) {
           <div className="grid md:grid-cols-3 gap-2 text-xs">
             <div className="border border-base-700 p-3">
               <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">total posts</div>
-              <div className="font-display italic text-3xl text-live tabular">{json.weekly_summary.total_posts ?? calendar.length}</div>
+              <div className="font-display font-semibold text-3xl text-live tabular">{json.weekly_summary.total_posts ?? calendar.length}</div>
             </div>
             <div className="border border-base-700 p-3">
               <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">by platform</div>
@@ -153,7 +153,7 @@ function PostCard({ post }: { post: any }) {
         <span className="ml-auto text-[10px] font-mono text-ink-faint">{post.best_post_time_local}</span>
       </div>
 
-      <p className="font-display italic text-base text-live leading-tight">{post.hook}</p>
+      <p className="font-display font-semibold text-base text-live leading-tight">{post.hook}</p>
 
       <div className="border-t border-base-700 pt-2">
         <div className="flex items-center justify-between mb-1">

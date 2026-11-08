@@ -48,7 +48,7 @@ const mistralCfg = { baseUrl: "https://api.mistral.ai/v1", testModel: "mistral-s
 const openrouterCfg = {
   baseUrl: "https://openrouter.ai/api/v1",
   testModel: "google/gemma-4-31b-it:free",
-  extraHeaders: { "HTTP-Referer": typeof window !== "undefined" ? window.location.origin : "https://openadkit.local", "X-Title": "OpenAdKit" },
+  extraHeaders: { "HTTP-Referer": typeof window !== "undefined" ? window.location.origin : "https://openadkit.local", "X-Title": "Ad Studio" },
 };
 
 export const openai: Provider = {
@@ -118,7 +118,7 @@ export const openrouter: Provider = {
   name: "OpenRouter",
   category: "freemium",
   description: "One key → access to many models including FREE community models. Best for trying multiple models without multiple keys.",
-  free_note: "Models tagged ':free' have generous free quotas — the fastest way to run OpenAdKit at $0.",
+  free_note: "Models tagged ':free' have generous free quotas — the fastest way to run Ad Studio at $0.",
   get_key_url: "https://openrouter.ai/keys",
   // Was `meta-llama/llama-3.3-70b-instruct:free`, withdrawn from OpenRouter's
   // catalog — it took the key-verification call down with it.

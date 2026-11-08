@@ -19,7 +19,7 @@ export function Topbar({ title, subtitle, scope, showLive }: Props) {
         <div className="flex-1" />
         <BrandSwitcher />
       </div>
-      <h1 className="font-display italic text-[42px] leading-none text-ink tracking-ui-tight">{title}</h1>
+      <h1 className="font-display font-semibold text-[42px] leading-none text-ink tracking-ui-tight">{title}</h1>
       {subtitle ? <p className="mt-3 text-[13px] text-ink-muted max-w-2xl leading-relaxed">{subtitle}</p> : null}
       <div className="mt-5 hairline" />
     </div>

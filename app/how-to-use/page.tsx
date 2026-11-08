@@ -6,19 +6,19 @@
  *   "how to use AI ad generator", "open source ai marketing tool tutorial"
  *
  * Server-rendered, no client-side JS, no ApiKeyGate. Indexable by Google.
- * Mirrors the README "How to use OpenAdKit — step-by-step" section but with
+ * Mirrors the README "How to use Ad Studio — step-by-step" section but with
  * hyperlinked internal navigation and HowTo schema for rich results.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "How to Use OpenAdKit — Step-by-Step Guide (10 Minutes Start to First Ad)",
+  title: "How to Use Ad Studio — Step-by-Step Guide (10 Minutes Start to First Ad)",
   description:
-    "Complete step-by-step guide to OpenAdKit, the free open-source AI marketing tool. Install, add your first brand from a URL, generate Meta/Google/TikTok ads, score and optimize before launch. Your first 10 minutes covered.",
+    "Complete step-by-step guide to Ad Studio, the free open-source AI marketing tool. Install, add your first brand from a URL, generate Meta/Google/TikTok ads, score and optimize before launch. Your first 10 minutes covered.",
   alternates: { canonical: "/how-to-use" },
   openGraph: {
-    title: "How to Use OpenAdKit — Step-by-Step Guide",
+    title: "How to Use Ad Studio — Step-by-Step Guide",
     description:
       "Install, add your first brand, generate AI ad copy across Meta/Google/TikTok/LinkedIn, score and optimize before launch — all in your first 10 minutes.",
     type: "article",
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
 const HOW_TO_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: "How to use OpenAdKit — open source AI marketing tool",
+  name: "How to use Ad Studio — open source AI marketing tool",
   description:
-    "Install OpenAdKit, set up an AI provider, auto-extract a brand profile from a URL, generate platform-specific ad copy, and score it before launch — all in about 10 minutes.",
+    "Install Ad Studio, set up an AI provider, auto-extract a brand profile from a URL, generate platform-specific ad copy, and score it before launch — all in about 10 minutes.",
   totalTime: "PT10M",
   estimatedCost: {
     "@type": "MonetaryAmount",
@@ -46,20 +46,20 @@ const HOW_TO_SCHEMA = {
   step: [
     {
       "@type": "HowToStep",
-      name: "Get OpenAdKit running",
-      text: "Pick one of two install paths: (A) Hosted — click Deploy with Vercel or Cloudflare in the GitHub README for your own URL in 30 seconds; or (B) Local — download the repo ZIP and double-click OpenAdKit.bat (Windows) or OpenAdKit.command (Mac/Linux). First local run installs dependencies in about 2 minutes; subsequent runs are one click.",
+      name: "Get Ad Studio running",
+      text: "Pick one of two install paths: (A) Hosted — click Deploy with Vercel or Cloudflare in the GitHub README for your own URL in 30 seconds; or (B) Local — download the repo ZIP and double-click Ad Studio.bat (Windows) or Ad Studio.command (Mac/Linux). First local run installs dependencies in about 2 minutes; subsequent runs are one click.",
       url: "https://openadkit.dicecodes.com/how-to-use#step-1",
     },
     {
       "@type": "HowToStep",
       name: "Pick an AI provider and paste a key",
-      text: "OpenAdKit supports 9 AI providers: free tier on Groq, Gemini, Cerebras, OpenRouter; paid on Anthropic Claude, OpenAI GPT, DeepSeek, Mistral, Together AI. Sign up on the provider's site, copy your API key, paste in the OpenAdKit setup wizard, click Verify, pick a model.",
+      text: "Ad Studio supports 9 AI providers: free tier on Groq, Gemini, Cerebras, OpenRouter; paid on Anthropic Claude, OpenAI GPT, DeepSeek, Mistral, Together AI. Sign up on the provider's site, copy your API key, paste in the Ad Studio setup wizard, click Verify, pick a model.",
       url: "https://openadkit.dicecodes.com/how-to-use#step-2",
     },
     {
       "@type": "HowToStep",
       name: "Add your first brand",
-      text: "Paste any brand website URL. OpenAdKit reads the homepage plus 2-3 subpages, pulls Open Graph and JSON-LD data, and uses the AI to populate 30+ brand fields including business name, industry, USP, tone, audience pain points and desires, key benefits, brand voice, words to use and avoid, and competitors. Review, edit, save.",
+      text: "Paste any brand website URL. Ad Studio reads the homepage plus 2-3 subpages, pulls Open Graph and JSON-LD data, and uses the AI to populate 30+ brand fields including business name, industry, USP, tone, audience pain points and desires, key benefits, brand voice, words to use and avoid, and competitors. Review, edit, save.",
       url: "https://openadkit.dicecodes.com/how-to-use#step-3",
     },
     {
@@ -89,7 +89,7 @@ const STEPS: Step[] = [
   {
     id: "step-1",
     num: 1,
-    title: "Get OpenAdKit running",
+    title: "Get Ad Studio running",
     duration: "30 seconds – 5 minutes",
     body: (
       <>
@@ -106,14 +106,14 @@ const STEPS: Step[] = [
         <ol className="list-decimal list-inside space-y-1 text-sm text-ink-muted leading-relaxed">
           <li>Download the repo as a ZIP (green "Code" button → "Download ZIP") and extract it.</li>
           <li>
-            On Windows double-click <code className="text-[12px] bg-base-900 px-1 py-0.5">OpenAdKit.bat</code>; on
-            Mac/Linux double-click <code className="text-[12px] bg-base-900 px-1 py-0.5">OpenAdKit.command</code>.
+            On Windows double-click <code className="text-[12px] bg-base-900 px-1 py-0.5">Ad Studio.bat</code>; on
+            Mac/Linux double-click <code className="text-[12px] bg-base-900 px-1 py-0.5">Ad Studio.command</code>.
           </li>
           <li>First run installs dependencies (~2 minutes) and drops a desktop shortcut.</li>
           <li>From the second launch onwards it's a single double-click → browser opens to the app.</li>
         </ol>
         <p className="mt-3 text-[13px] text-ink-muted">
-          <strong className="text-live">You'll know it worked</strong> when the OpenAdKit setup wizard
+          <strong className="text-live">You'll know it worked</strong> when the Ad Studio setup wizard
           loads in your browser.
         </p>
       </>
@@ -127,7 +127,7 @@ const STEPS: Step[] = [
     body: (
       <>
         <p>
-          This is the <strong>only paid thing in OpenAdKit, and it can be $0</strong> if you pick a
+          This is the <strong>only paid thing in Ad Studio, and it can be $0</strong> if you pick a
           free tier. The setup wizard shows all 9 supported providers grouped by{" "}
           <strong className="text-pos">Free</strong> (Groq, Gemini, Cerebras, OpenRouter) and{" "}
           <strong>Paid</strong> (Anthropic Claude, OpenAI GPT, DeepSeek, Mistral, Together AI).
@@ -138,7 +138,7 @@ const STEPS: Step[] = [
             <strong className="text-ink">Groq</strong> (free, fastest) — sign up at{" "}
             <a href="https://console.groq.com" target="_blank" rel="noreferrer" className="text-live underline">console.groq.com</a>,
             copy your API key (starts with <code className="text-[11px]">gsk_…</code>), paste in
-            OpenAdKit.
+            Ad Studio.
           </li>
           <li>
             <strong className="text-ink">Gemini</strong> (free, great quality) — get a key at{" "}
@@ -151,7 +151,7 @@ const STEPS: Step[] = [
           </li>
         </ul>
         <p className="mt-4">
-          Click <strong>Verify</strong> — OpenAdKit makes one tiny test call to confirm the key
+          Click <strong>Verify</strong> — Ad Studio makes one tiny test call to confirm the key
           works. Pick a model from the dropdown (defaults are sensible). Click{" "}
           <strong>Continue</strong>.
         </p>
@@ -171,7 +171,7 @@ const STEPS: Step[] = [
     body: (
       <>
         <p>
-          This is OpenAdKit's killer feature.{" "}
+          This is Ad Studio's killer feature.{" "}
           <strong>You paste one URL, the AI extracts a complete brand profile in 30 seconds.</strong>
         </p>
         <ol className="list-decimal list-inside space-y-2 text-sm text-ink-muted leading-relaxed mt-3">
@@ -180,7 +180,7 @@ const STEPS: Step[] = [
             to generate ads for — your own brand, a client's, or a competitor's you're studying.
           </li>
           <li>
-            Click <strong>Extract</strong>. OpenAdKit reads the homepage plus 2–3 key subpages
+            Click <strong>Extract</strong>. Ad Studio reads the homepage plus 2–3 key subpages
             (/about, /pricing, /services), pulls Open Graph data and JSON-LD schema, and asks the AI
             to fill 30+ brand fields:
             <ul className="list-disc list-inside ml-6 mt-1 space-y-0.5 text-[13px]">
@@ -311,8 +311,8 @@ export default function HowToUsePage() {
         <p className="text-[11px] font-mono uppercase tracking-ui-mega text-live">
           Getting started · ~10 minutes
         </p>
-        <h1 className="font-display italic text-5xl text-ink leading-tight">
-          How to use OpenAdKit
+        <h1 className="font-display font-semibold text-5xl text-ink leading-tight">
+          How to use Ad Studio
         </h1>
         <p className="text-lg text-ink-muted leading-relaxed">
           From install to your first AI-generated ad in about 10 minutes. Follow the five steps in
@@ -343,7 +343,7 @@ export default function HowToUsePage() {
             <p className="text-[11px] font-mono uppercase tracking-ui-mega text-ink-faint">
               Step {s.num} · {s.duration}
             </p>
-            <h2 className="font-display italic text-3xl text-ink">{s.title}</h2>
+            <h2 className="font-display font-semibold text-3xl text-ink">{s.title}</h2>
           </header>
           <div className="space-y-3 text-sm text-ink-muted leading-relaxed prose-openadkit">
             {s.body}
@@ -352,7 +352,7 @@ export default function HowToUsePage() {
       ))}
 
       <section className="border-t border-base-700 pt-6 space-y-4">
-        <h2 className="font-display italic text-3xl text-ink">What to try next</h2>
+        <h2 className="font-display font-semibold text-3xl text-ink">What to try next</h2>
         <ul className="space-y-3 text-sm text-ink-muted leading-relaxed">
           <li>
             <strong className="text-ink">

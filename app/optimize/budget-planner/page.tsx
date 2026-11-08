@@ -65,7 +65,7 @@ function PlannerOutput({ json }: { json: any }) {
             {json.funnel_split_overall.map((f: any, i: number) => (
               <div key={i} className="border border-base-700 p-3">
                 <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">{f.stage}</div>
-                <div className="font-display italic text-2xl text-ink mt-1 tabular">{f.pct}%</div>
+                <div className="font-display font-semibold text-2xl text-ink mt-1 tabular">{f.pct}%</div>
                 <div className="text-[11px] text-pos font-mono tabular">{sym}{f.monthly_usd?.toLocaleString()}</div>
               </div>
             ))}

@@ -251,7 +251,7 @@ function Inner() {
           ))}
         </div>
         <p className="text-[10px] font-mono uppercase tracking-ui-wide text-ink-subtle mt-3 leading-relaxed">
-          OpenAdKit never calls these libraries directly · they open in a new tab in your own browser · zero data goes through us
+          Ad Studio never calls these libraries directly · they open in a new tab in your own browser · zero data goes through us
         </p>
       </Section>
 
@@ -438,7 +438,7 @@ function StealOutput({ json }: { json: any }) {
                 <span className="text-[10px] font-mono uppercase tracking-ui-wide text-ink-faint ml-auto">{v.char_count_primary} chars</span>
                 <CopyButton text={`${v.hook}\n\n${v.body}\n\n${v.cta}`} />
               </div>
-              <p className="font-display italic text-lg text-live leading-tight mb-1">{v.hook}</p>
+              <p className="font-display font-semibold text-lg text-live leading-tight mb-1">{v.hook}</p>
               <p className="text-sm text-ink whitespace-pre-line">{v.body}</p>
               <p className="text-sm text-pos mt-2 font-medium">{v.cta}</p>
               <p className="text-[11px] text-ink-muted mt-2 border-t border-base-700 pt-2">{v.why_this_beats_them}</p>

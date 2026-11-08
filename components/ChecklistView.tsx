@@ -204,7 +204,7 @@ function Inner({ scope }: Props) {
                       <span
                         className={`shrink-0 h-4 w-4 border grid place-items-center transition ${
                           checked
-                            ? "bg-live border-live text-base-950"
+                            ? "bg-live border-live text-black"
                             : "border-base-500 group-hover:border-ink-muted"
                         }`}
                       >
@@ -232,7 +232,7 @@ function Inner({ scope }: Props) {
                     >
                       <span
                         className={`shrink-0 h-4 w-4 border grid place-items-center transition ${
-                          checked ? "bg-live border-live text-base-950" : "border-base-500 group-hover:border-ink-muted"
+                          checked ? "bg-live border-live text-black" : "border-base-500 group-hover:border-ink-muted"
                         }`}
                       >
                         {checked ? <Check size={12} strokeWidth={3} /> : null}
@@ -299,7 +299,7 @@ function Stat({ label, value, accent, icon }: { label: string; value: string; ac
         {icon}
         {label}
       </div>
-      <div className={`mt-2 font-display italic text-3xl tabular ${accent ? "text-live" : "text-ink"}`}>{value}</div>
+      <div className={`mt-2 font-display font-semibold text-3xl tabular ${accent ? "text-live" : "text-ink"}`}>{value}</div>
     </div>
   );
 }

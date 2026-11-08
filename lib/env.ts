@@ -1,7 +1,7 @@
 /**
  * Runtime environment helpers.
  *
- * OpenAdKit ships two deployment modes:
+ * Ad Studio ships two deployment modes:
  *
  *   1. **Local** — user installs and runs the Next dev/start server +
  *      `scripts/local-sync.cjs` sidecar on 127.0.0.1. Sidecar provides
@@ -11,7 +11,7 @@
  *   2. **Hosted** — same Next app deployed to Vercel/Cloudflare/Netlify
  *      with no sidecar. URL is something like openadkit.example.com.
  *      Storage is IndexedDB-only. URL ingest falls back to the Next API
- *      route /api/ingest (server-side fetch) plus jina + allorigins.
+ *      route /api/ingest (server-side fetch) only.
  *
  * `isHostedMode()` returns true when running from a non-loopback host.
  * Every sidecar-dependent code path checks this so the hosted version

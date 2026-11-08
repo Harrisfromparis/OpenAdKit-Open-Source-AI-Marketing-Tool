@@ -71,7 +71,7 @@ export default function SetupPage() {
     try {
       let extracted: any = null;
       if (brandUrl.trim()) {
-        setBrandStatus("Reading the page via Jina Reader…");
+        setBrandStatus("Reading the page…");
         const r = await ingestUrl(brandUrl);
         if (!r.ok) {
           setBrandStatus(`Reader couldn't fetch — saving placeholder brain you can fill later.`);
@@ -137,10 +137,11 @@ export default function SetupPage() {
       <div className="w-full max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 bg-live grid place-items-center text-base-950 font-display italic text-xl">A</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-reversed.png" alt="Autism & Me" width={44} height={42} className="h-[42px] w-auto" />
             <div>
               <div className="scope-prefix">~/setup</div>
-              <div className="font-display italic text-2xl text-ink leading-none mt-1">OpenAdKit</div>
+              <div className="font-display font-semibold text-2xl text-ink leading-none mt-1">Ad Studio</div>
             </div>
           </div>
           <Stepper current={step} total={5} />
@@ -211,19 +212,19 @@ function StepWelcome() {
   return (
     <div>
       <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">welcome</div>
-      <h2 className="font-display italic text-4xl text-ink leading-tight">The open source AI marketing tool that runs in your browser.</h2>
-      <p className="text-sm text-ink-muted mt-4 leading-relaxed max-w-lg">
-        OpenAdKit replaces a stack of $49–$499/month AI marketing tools with one open-source app.
-        No backend, no accounts, no telemetry. You bring your own AI key — free or paid, your choice — and everything runs locally.
+      <h2 className="font-display font-semibold text-4xl text-ink leading-tight">The Autism &amp; Me Ad Studio.</h2>
+      <p className="text-ink-muted mt-4 leading-relaxed max-w-lg">
+        Plan, write and check ads for Meta and other platforms in the Autism &amp; Me voice. Your AI key and your work stay in
+        this browser. Ad Studio prepares ads; it never posts and never spends.
       </p>
-      <ul className="mt-5 space-y-2 text-sm text-ink">
-        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>16 generators for Google, Meta, TikTok, YouTube, LinkedIn, X, Display + hashtags, lead forms, email subjects, AI image/video prompts</span></li>
-        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>11 optimization tools — CTR, Quality Score, Budget Waste, Bid Strategy, Ad Fatigue, more</span></li>
-        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>Competitor research from Meta Ads Library + Google Transparency Center</span></li>
-        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>Manage multiple client brands by pasting their website URL</span></li>
+      <ul className="mt-5 space-y-2 text-ink">
+        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>Ad writers for Meta (Feed, Reels, Stories), Google, TikTok, YouTube and Pinterest</span></li>
+        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>Ad Check on every result: Meta policy, claims, language and the brand rules</span></li>
+        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>A ready-made Autism &amp; Me brand profile</span></li>
+        <li className="flex items-start gap-2"><span className="text-live mt-1">○</span><span>Approved ads go to ANposting as saved drafts</span></li>
       </ul>
       <p className="mt-5 text-[10px] font-mono uppercase tracking-ui-wide text-ink-subtle">
-        90-second tour next · then we'll set up your AI provider
+        Short tour next, then add your AI key
       </p>
     </div>
   );
@@ -245,7 +246,7 @@ function StepTour({ idx, setIdx }: { idx: number; setIdx: (n: number) => void })
       <div className="h-12 w-12 grid place-items-center bg-live/10 border border-live/40 mb-4">
         <Icon size={20} className="text-live" />
       </div>
-      <h2 className="font-display italic text-3xl text-ink leading-tight">{s.title}</h2>
+      <h2 className="font-display font-semibold text-3xl text-ink leading-tight">{s.title}</h2>
       <p className="text-sm text-ink-muted mt-4 leading-relaxed">{s.body}</p>
       <div className="mt-6 flex gap-1" role="tablist" aria-label="Tour slides">
         {TOUR_SLIDES.map((_, i) => (
@@ -282,7 +283,7 @@ function StepProvider({
   return (
     <div>
       <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">step 3 of 5</div>
-      <h2 className="font-display italic text-3xl text-ink leading-tight">Pick your AI provider.</h2>
+      <h2 className="font-display font-semibold text-3xl text-ink leading-tight">Pick your AI provider.</h2>
       <p className="text-sm text-ink-muted mt-3 leading-relaxed max-w-lg">
         Start with a free option (Groq, Cerebras, Gemini, OpenRouter) — they all give generous quotas that cover most personal use. Upgrade to paid models any time from Settings.
       </p>
@@ -344,7 +345,7 @@ function StepKey({
   return (
     <div>
       <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">step 4 of 5</div>
-      <h2 className="font-display italic text-3xl text-ink leading-tight">Paste your {provider.name} key.</h2>
+      <h2 className="font-display font-semibold text-3xl text-ink leading-tight">Paste your {provider.name} key.</h2>
       <p className="text-sm text-ink-muted mt-3 leading-relaxed">
         Stored in this browser only. Never sent anywhere except {provider.name}'s API. Get a key:{" "}
         <a href={provider.get_key_url} target="_blank" rel="noreferrer" className="text-live hover:underline inline-flex items-center gap-0.5">
@@ -384,7 +385,7 @@ function StepBrand({
   return (
     <div>
       <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">step 5 of 5</div>
-      <h2 className="font-display italic text-3xl text-ink leading-tight">Add your first brand.</h2>
+      <h2 className="font-display font-semibold text-3xl text-ink leading-tight">Add your first brand.</h2>
       <p className="text-sm text-ink-muted mt-3 leading-relaxed max-w-lg">
         Paste a website URL — we extract the brand profile automatically (tone, audience, USP, VOC).
         You can refine it after, and add more brands any time from <Link href="/brand" className="text-live hover:underline">/brand</Link>.
@@ -402,7 +403,7 @@ function StepBrand({
             spellCheck={false}
           />
           <p className="text-[10px] font-mono uppercase tracking-ui-wide text-ink-subtle mt-1">
-            uses jina reader · free + public · runs from your browser
+            read by Ad Studio · free · nothing stored
           </p>
         </div>
         <div>

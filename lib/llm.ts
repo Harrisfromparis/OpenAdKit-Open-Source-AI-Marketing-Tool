@@ -32,7 +32,7 @@ interface RunOptions {
   modelOverride?: string;
   apiKeyOverride?: string;
   /**
-   * Request system-prompt prefix caching. Defaults to true: OpenAdKit's system
+   * Request system-prompt prefix caching. Defaults to true: Ad Studio's system
    * prompt is the brand brain + framework stack, which is byte-identical across
    * every generation for a given brand — an ideal (and large) cache prefix.
    * Providers without caching support ignore it.

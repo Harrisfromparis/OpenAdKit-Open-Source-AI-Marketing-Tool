@@ -655,7 +655,7 @@ function Inner() {
                     aria-pressed={on}
                     // py-2 mobile / py-1 desktop hits 44px touch target.
                     className={`text-[11px] font-mono uppercase tracking-ui-wide px-2.5 py-2 md:py-1 border transition ${
-                      on ? "bg-live text-base-950 border-live" : "border-base-600 text-ink-muted hover:border-base-500"
+                      on ? "bg-live text-black border-live" : "border-base-600 text-ink-muted hover:border-base-500"
                     }`}
                   >
                     {p.label}

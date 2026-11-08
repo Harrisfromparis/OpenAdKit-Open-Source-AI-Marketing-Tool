@@ -120,7 +120,7 @@ function BidOutput({ json }: { json: any }) {
       ) : null}
 
       <Section title="Recommendation">
-        <div className="font-display italic text-3xl text-live leading-tight">{json?.recommended_strategy}</div>
+        <div className="font-display font-semibold text-3xl text-live leading-tight">{json?.recommended_strategy}</div>
         <p className="text-sm text-ink-muted mt-3 leading-relaxed">{json?.reason}</p>
         {json?.fallback_strategy_if_data_insufficient ? (
           <div className="mt-3 border-t border-base-700 pt-2">

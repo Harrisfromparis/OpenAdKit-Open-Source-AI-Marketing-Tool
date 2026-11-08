@@ -32,7 +32,7 @@ function Inner() {
               <span className="text-[10px] font-mono uppercase tracking-ui-mega text-live">{p.formats.length} formats</span>
               <span className="text-[10px] font-mono text-ink-faint group-hover:text-live transition">↗</span>
             </div>
-            <h3 className="font-display italic text-2xl text-ink leading-tight">{p.name}</h3>
+            <h3 className="font-display font-semibold text-2xl text-ink leading-tight">{p.name}</h3>
             <p className="text-xs text-ink-muted leading-relaxed italic">{p.tagline}</p>
             <div className="mt-auto pt-3 border-t border-base-700 text-[11px] text-ink-muted">
               <span className="text-pos">Best for:</span> {p.best_for}

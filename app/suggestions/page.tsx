@@ -173,7 +173,7 @@ function Inner() {
       ) : (
         <div className="border border-base-600 bg-base-900/40 p-4 mb-4 flex items-center gap-3">
           <span className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">analyzing brand</span>
-          <span className="font-display italic text-xl text-live">{brain.name || brain.business_name}</span>
+          <span className="font-display font-semibold text-xl text-live">{brain.name || brain.business_name}</span>
           {brain.usp ? <span className="text-[12px] text-ink-muted ml-auto truncate max-w-md">{brain.usp}</span> : null}
         </div>
       )}
@@ -234,7 +234,7 @@ function SuggestionsOutput({ json }: { json: any }) {
                   <Pill text={c.objective} />
                   <span className="ml-auto text-[10px] font-mono uppercase tracking-ui-wide text-pos">{getCurrency().symbol}{c.monthly_budget_usd}/mo</span>
                 </div>
-                <h3 className="font-display italic text-2xl text-ink leading-tight">{c.name}</h3>
+                <h3 className="font-display font-semibold text-2xl text-ink leading-tight">{c.name}</h3>
                 <p className="text-sm text-ink-muted mt-2 leading-relaxed">{c.why_this_brand}</p>
                 <div className="grid md:grid-cols-2 gap-2 mt-3 text-xs">
                   <Kv k="audience" v={c.target_audience} />
@@ -248,7 +248,7 @@ function SuggestionsOutput({ json }: { json: any }) {
                 ) : null}
                 {c.adOS_workflow?.length ? (
                   <div className="mt-3 pt-3 border-t border-base-700">
-                    <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1.5">your workflow in OpenAdKit</div>
+                    <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1.5">your workflow in Ad Studio</div>
                     <div className="flex flex-wrap gap-2">
                       {c.adOS_workflow.map((w: any, j: number) => (
                         <Link key={j} href={w.url} className="btn-ghost text-[11px]">

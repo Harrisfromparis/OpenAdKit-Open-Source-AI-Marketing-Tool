@@ -74,8 +74,8 @@ export function MobileNav() {
         >
           <div className="flex items-center justify-between border-b border-base-600 px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-7 w-7 bg-live grid place-items-center text-base-950 font-bold font-display italic">A</div>
-              <div className="font-display italic text-lg text-ink">OpenAdKit</div>
+              <div className="h-7 w-7 bg-live grid place-items-center text-black font-bold font-display font-semibold">A</div>
+              <div className="font-display font-semibold text-lg text-ink">Ad Studio</div>
             </Link>
             <button
               ref={closeRef}

@@ -48,7 +48,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         <div className="flex items-start gap-3 mb-3">
           <AlertTriangle size={22} className="text-neg shrink-0 mt-0.5" />
           <div>
-            <h1 className="font-display italic text-2xl text-ink leading-tight">Something broke on this page.</h1>
+            <h1 className="font-display font-semibold text-2xl text-ink leading-tight">Something broke on this page.</h1>
             <p className="text-sm text-ink-muted mt-1">
               Your data is safe — every brand, ad, and campaign lives in your browser's IndexedDB and isn't touched
               by a render error. Try again, or jump back to the dashboard.

@@ -49,7 +49,7 @@ function BhcOutput({ json }: { json: any }) {
       {json?.viability ? (
         <Section title="Viability check">
           <div className="flex items-baseline gap-3 mb-2">
-            <div className={`font-display italic text-4xl tabular ${json.viability.score >= 7 ? "text-pos" : json.viability.score >= 5 ? "text-live" : "text-neg"}`}>
+            <div className={`font-display font-semibold text-4xl tabular ${json.viability.score >= 7 ? "text-pos" : json.viability.score >= 5 ? "text-live" : "text-neg"}`}>
               {json.viability.score}/10
             </div>
             <Pill text={json.viability.recommend_proceed ? "proceed" : "do not proceed"} tone={json.viability.recommend_proceed ? "pos" : "neg"} />
@@ -65,7 +65,7 @@ function BhcOutput({ json }: { json: any }) {
 
       {json?.hashtag ? (
         <Section title="Hashtag" actions={<CopyButton text={json.hashtag.tag} />}>
-          <div className="font-display italic text-3xl text-live">{json.hashtag.tag}</div>
+          <div className="font-display font-semibold text-3xl text-live">{json.hashtag.tag}</div>
           <p className="text-xs text-ink-muted mt-2 leading-relaxed">{json.hashtag.rationale}</p>
           {json.hashtag.potential_conflicts?.length ? (
             <div className="mt-3 pt-2 border-t border-base-700">
@@ -110,7 +110,7 @@ function BhcOutput({ json }: { json: any }) {
           <div className="border border-base-700 p-3 space-y-2">
             <div>
               <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">challenge name</div>
-              <p className="font-display italic text-2xl text-live">{json.discover_page.challenge_name}</p>
+              <p className="font-display font-semibold text-2xl text-live">{json.discover_page.challenge_name}</p>
             </div>
             <div>
               <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">description</div>

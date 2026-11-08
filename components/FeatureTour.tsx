@@ -97,7 +97,7 @@ export function FeatureTour() {
           <div className="h-10 w-10 grid place-items-center bg-live/10 border border-live/40 mb-4">
             <Icon size={18} className="text-live" />
           </div>
-          <h3 className="font-display italic text-3xl text-ink leading-tight">{slide.title}</h3>
+          <h3 className="font-display font-semibold text-3xl text-ink leading-tight">{slide.title}</h3>
           <p className="text-sm text-ink-muted mt-3 leading-relaxed">{slide.body}</p>
           {slide.cta ? (
             <Link

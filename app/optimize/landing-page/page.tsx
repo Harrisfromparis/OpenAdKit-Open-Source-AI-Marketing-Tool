@@ -127,7 +127,7 @@ function LpOutput({ json }: { json: any }) {
           <div className="space-y-2">
             <div>
               <CharBadge count={json.rewrite_above_the_fold.h1?.length || 0} max={60} />
-              <p className="font-display italic text-xl text-ink leading-tight mt-1">{json.rewrite_above_the_fold.h1}</p>
+              <p className="font-display font-semibold text-xl text-ink leading-tight mt-1">{json.rewrite_above_the_fold.h1}</p>
             </div>
             <div>
               <CharBadge count={json.rewrite_above_the_fold.subhead?.length || 0} max={140} />
@@ -154,7 +154,7 @@ function Stat({ label, value, tone = "default", small }: { label: string; value:
   return (
     <div className="border border-base-600 bg-base-900/30 p-3">
       <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">{label}</div>
-      <div className={`mt-1 ${small ? "text-xs leading-relaxed" : "font-display italic text-2xl tabular"} ${toneMap[tone]}`}>{value}</div>
+      <div className={`mt-1 ${small ? "text-xs leading-relaxed" : "font-display font-semibold text-2xl tabular"} ${toneMap[tone]}`}>{value}</div>
     </div>
   );
 }

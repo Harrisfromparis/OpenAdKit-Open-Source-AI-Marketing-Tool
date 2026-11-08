@@ -22,6 +22,7 @@ import {
   Brain,
   Plus,
   Check,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ import type { BrandBrain } from "@/lib/brand-brain";
 // Lucide doesn't ship a Google-G icon by default; use SearchIcon as the closest
 // semantic fit (Google = search ads in this app). Same for TikTok → Music2.
 const GROUP_ICONS: Record<string, LucideIcon> = {
+  "Autism & Me": ShieldCheck,
   "Start here": Sparkles,
   "Meta · Facebook + Instagram": Facebook,
   "Google · Search + PMax + Shopping": SearchIcon,
@@ -136,23 +138,14 @@ export function Sidebar() {
     >
       {/* Brand block — shrink-0 so it can't be squeezed when nav is tall */}
       <div className="shrink-0 flex items-center gap-2.5 px-4 py-5 border-b border-base-700/60">
-        <Link href="/" className="flex items-center gap-2.5 group" aria-label="OpenAdKit dashboard">
-          <div className="relative h-9 w-9 grid place-items-center">
-            <div className="absolute inset-0 bg-live rounded-sm" />
-            <div className="absolute inset-0 bg-live/40 rounded-sm blur-md group-hover:blur-lg transition-all" />
-            <span className="relative text-base-950 font-bold font-display italic text-xl leading-none">A</span>
-          </div>
+        <Link href="/" className="flex items-center gap-3 group" aria-label="Autism & Me Ad Studio, home">
+          {/* Reversed Autism & Me logo (white wording) for the dark-teal ground. Never redrawn. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-reversed.png" alt="Autism & Me" width={58} height={55} className="h-[55px] w-auto shrink-0" />
           <div className="leading-tight">
-            <div className="font-display italic text-2xl text-ink group-hover:text-live transition-colors">OpenAdKit</div>
-            <div className="text-[10px] text-ink-subtle font-mono uppercase tracking-ui-wide">ai ads · byok · local</div>
+            <div className="font-display font-semibold text-xl text-ink group-hover:text-live transition-colors">Ad Studio</div>
+            <div className="text-[11px] text-ink-subtle">Change the environment, not the child.</div>
           </div>
-        </Link>
-        <Link
-          href="/about"
-          className="ml-auto text-[10px] text-live hover:text-live/80 transition shrink-0 font-mono uppercase tracking-ui-wide"
-          aria-label="About Dicecodes"
-        >
-          by Dicecodes
         </Link>
       </div>
 

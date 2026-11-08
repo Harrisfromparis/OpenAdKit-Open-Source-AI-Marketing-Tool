@@ -50,7 +50,7 @@ function StrategyOutput({ json }: { json: any }) {
     <div className="space-y-4 stagger">
       <Section title="Primary platform">
         <div className="flex items-baseline gap-3">
-          <div className="font-display italic text-3xl text-live">{json?.primary_platform?.name}</div>
+          <div className="font-display font-semibold text-3xl text-live">{json?.primary_platform?.name}</div>
           <Pill label="min budget" text={`$${(json?.primary_platform?.min_budget_usd ?? 0).toLocaleString()}/mo`} />
         </div>
         <p className="text-sm text-ink-muted mt-3 leading-relaxed">{json?.primary_platform?.reason}</p>
@@ -59,7 +59,7 @@ function StrategyOutput({ json }: { json: any }) {
       {json?.secondary_platform?.name ? (
         <Section title="Secondary platform">
           <div className="flex items-baseline gap-3">
-            <div className="font-display italic text-2xl text-ink">{json.secondary_platform.name}</div>
+            <div className="font-display font-semibold text-2xl text-ink">{json.secondary_platform.name}</div>
             <Pill label="min" text={`$${(json.secondary_platform.min_budget_usd ?? 0).toLocaleString()}/mo`} />
           </div>
           <p className="text-sm text-ink-muted mt-2">{json.secondary_platform.reason}</p>

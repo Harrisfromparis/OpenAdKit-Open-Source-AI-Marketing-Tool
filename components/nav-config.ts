@@ -37,10 +37,20 @@ export interface NavGroup {
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
+    title: "Autism & Me",
+    defaultOpen: true,
+    items: [
+      { href: "/check", label: "Ad Check" },
+      { href: "/generate/meta", label: "Meta ad · Feed and Reels" },
+      { href: "/generate/creative-prompts", label: "Image prompts", query: "platform=Meta+Feed" },
+      { href: "/about", label: "House rules and credits" },
+    ],
+  },
+  {
     title: "Start here",
     items: [
       { href: "/", label: "Dashboard" },
-      { href: "/how-to-use", label: "How to use OpenAdKit" },
+      { href: "/how-to-use", label: "How to use Ad Studio" },
       { href: "/providers", label: "Which AI should I use?" },
       { href: "/brand", label: "Clients · Brand Brain" },
       { href: "/brand/new", label: "+ Add new client" },

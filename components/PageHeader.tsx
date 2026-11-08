@@ -25,7 +25,7 @@ export function PageHeader({ scope, title, subtitle, showLive, actions }: Props)
         <LastGeneratedPill />
         {actions ?? <BrandSwitcher />}
       </div>
-      <h1 className="font-display italic text-[42px] leading-none text-ink tracking-ui-tight">
+      <h1 className="font-display font-semibold text-[42px] leading-none text-ink tracking-ui-tight">
         {title}
       </h1>
       {subtitle ? (

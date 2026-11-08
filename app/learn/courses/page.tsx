@@ -35,7 +35,7 @@ function Inner() {
               </span>
               <span className="text-[10px] font-mono text-ink-faint group-hover:text-live transition">↗</span>
             </div>
-            <h3 className="font-display italic text-2xl text-ink leading-tight">{c.name}</h3>
+            <h3 className="font-display font-semibold text-2xl text-ink leading-tight">{c.name}</h3>
             <p className="text-xs text-ink-muted leading-relaxed">{c.blurb}</p>
             <div className="mt-auto text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">
               total read · ~{c.lessons.reduce((s, l) => s + l.read_minutes, 0)} min

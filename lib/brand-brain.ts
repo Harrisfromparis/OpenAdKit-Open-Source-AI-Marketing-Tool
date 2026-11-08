@@ -140,7 +140,28 @@ export interface SystemPromptOverrides {
   skip_framework_stack?: boolean;
 }
 
+/**
+ * Autism & Me house rules. Appended to every system prompt so drafts start
+ * out within Meta policy and the brand kit; Ad Check then verifies them.
+ */
+export const AUTISM_AND_ME_HOUSE_RULES = `
+=== AUTISM & ME HOUSE RULES (these override any instruction above) ===
+- Voice: calm, warm, plain Irish English. Short sentences. Never use exclamation marks. No hype words, no urgency tricks, no ALL CAPS.
+- Philosophy: "Change the environment, not the child." Talk about rooms, routines, plans and systems adapting. Never frame a child or adult as the problem.
+- Never write deficit language: no "suffering from", "afflicted", "high/low functioning", "normal children", "special needs", "disorder", "burden", "challenging behaviour". No puzzle pieces.
+- Meta personal-attributes rule: never assert or imply that the person reading has autism, ADHD, a disability, a diagnosis, anxiety or any condition. Do not write "your autistic child", "Is your child autistic?", "your child's ADHD", "struggling with". Write in the third person about learners, families, schools and settings instead.
+- No health or outcome claims: never cure, treat, fix, heal, recover, guaranteed, proven, "stop meltdowns".
+- No invented testimonials, reviews, statistics, awards or partnerships.
+- Political or social-issue calls to action (petitions, ministers, votes, national strategy) belong in organic posts, not paid ads. Flag them instead of writing them as an ad.
+- Image and video prompts: describe the environment and background only. Blue Cat and Pink Cat are placed later from the approved art files, so never ask a model to draw them. Never show any adult touching a child (no hugs, holding hands, hand on shoulder, carrying); keep adults nearby at a respectful distance. No identifiable real children.
+- The name is always written "Autism & Me". Website: autismandme.ie. Keep links out of the ad text; they go in the destination field.
+=== END HOUSE RULES ===`;
+
 export function buildBrandSystemPrompt(brain: BrandBrain | null, overrides?: SystemPromptOverrides): string {
+  return buildBrandSystemPromptBase(brain, overrides) + "\n" + AUTISM_AND_ME_HOUSE_RULES;
+}
+
+function buildBrandSystemPromptBase(brain: BrandBrain | null, overrides?: SystemPromptOverrides): string {
   const lang = overrides?.language && overrides.language !== "English" ? `\n\nLANGUAGE: Output ALL generated copy in ${overrides.language}. Variant labels, JSON field names, and metadata stay in English.` : "";
   const toneOverride = overrides?.tone_override ? `\n\nTONE OVERRIDE (replaces brand default): ${overrides.tone_override}` : "";
   const framework = overrides?.skip_framework_stack ? "" : `\n${FRAMEWORK_STACK}\n`;

@@ -6,6 +6,7 @@ import { Loader2, Sparkles, Save, AlertTriangle, StopCircle } from "lucide-react
 import { ApiKeyGate } from "@/components/ApiKeyGate";
 import { PageHeader } from "@/components/PageHeader";
 import { CopyButton } from "@/components/CopyButton";
+import { AdCheckPanel } from "@/components/AdCheckPanel";
 import { useThrottledStream } from "@/lib/stream-hook";
 import { getApiKey, getModel, getActiveBrainId, addUsage, getLanguage, getToneOverride, getAutoSave } from "@/lib/settings";
 import { streamClaude, estimateCostUsd, tryParseJson, llmStream, llmCall, type LLMMessage } from "@/lib/llm";
@@ -443,7 +444,7 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
                   <div className="text-[13px] text-ink">
                     <div className="font-medium text-live">Output will be generic without a client.</div>
                     <p className="text-ink-muted text-[12px] mt-1 leading-relaxed">
-                      Every OpenAdKit tool reads the active client's brand brain — voice, audience, USP, content pillars. Without one, the AI defaults to neutral DR copy. Takes ~10 seconds to set up by pasting a website URL.
+                      Every Ad Studio tool reads the active client's brand brain — voice, audience, USP, content pillars. Without one, the AI defaults to neutral DR copy. Takes ~10 seconds to set up by pasting a website URL.
                     </p>
                   </div>
                 </div>
@@ -478,7 +479,7 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
                       return next;
                     });
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-live text-base-950 font-semibold text-[13px] hover:bg-live/90 transition"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-live text-black font-semibold text-[13px] hover:bg-live/90 transition"
                   title="Auto-fill empty fields from this client's brand brain"
                 >
                   <Sparkles size={13} />
@@ -549,7 +550,7 @@ function Inner<I extends Record<string, unknown>>({ config, scope }: Props<I>) {
         </section>
 
         <section className="lg:col-span-3 space-y-4">
-          <OutputArea running={running} stream={stream.text} parsed={parsed} config={config as unknown as GeneratorConfig<Record<string, unknown>>} hasRun={hasRun} lastError={error} schemaRecovered={schemaRecovered} lastRun={lastRun} />
+          <OutputArea running={running} stream={stream.text} parsed={parsed} config={config as unknown as GeneratorConfig<Record<string, unknown>>} hasRun={hasRun} lastError={error} schemaRecovered={schemaRecovered} lastRun={lastRun} scope={scope} />
           {savedId && nextSteps.length ? <NextStepsPanel steps={nextSteps} /> : null}
         </section>
       </div>
@@ -855,7 +856,9 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
   lastError,
   schemaRecovered,
   lastRun,
+  scope = "",
 }: {
+  scope?: string;
   running: boolean;
   stream: string;
   parsed: any;
@@ -960,6 +963,7 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
           <CopyButton text={stream} label="copy raw output" />
           <CopyButton text={JSON.stringify(parsed, null, 2)} label="copy parsed json" />
         </div>
+        <AdCheckPanel content={parsed} scope={scope} />
       </div>
     );
   }
@@ -1002,6 +1006,7 @@ const OutputArea = memo(function OutputArea<I extends Record<string, unknown>>({
         {stream || "…"}
       </pre>
       {!running && lastRun ? <div className="mt-3"><UsageStrip run={lastRun} /></div> : null}
+      {!running && stream ? <div className="mt-4"><AdCheckPanel content={stream} scope={scope} /></div> : null}
     </div>
   );
 });

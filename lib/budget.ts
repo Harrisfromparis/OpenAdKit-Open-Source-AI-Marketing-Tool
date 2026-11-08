@@ -1,7 +1,7 @@
 /**
  * Monthly spend budget.
  *
- * OpenAdKit already tracks per-client spend in History, but nothing stopped a
+ * Ad Studio already tracks per-client spend in History, but nothing stopped a
  * runaway loop (or an enthusiastic batch run across 40 clients on an expensive
  * model) from quietly burning through a month's API budget. This adds the
  * missing half: a ceiling, a warning band, and an enforcement point.

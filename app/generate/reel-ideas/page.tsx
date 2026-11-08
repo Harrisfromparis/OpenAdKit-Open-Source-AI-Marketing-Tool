@@ -136,7 +136,7 @@ function ReelOutput({ json }: { json: any }) {
               <div className="space-y-2">
                 <div>
                   <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">hook (first 3 sec)</div>
-                  <p className="font-display italic text-lg text-live leading-tight">{r.hook}</p>
+                  <p className="font-display font-semibold text-lg text-live leading-tight">{r.hook}</p>
                 </div>
                 <div>
                   <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">visual brief</div>

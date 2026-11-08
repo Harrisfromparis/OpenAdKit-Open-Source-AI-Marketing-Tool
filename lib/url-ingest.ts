@@ -4,11 +4,8 @@
  * Strategy:
  *   1. Local sidecar (local install only) OR /api/ingest Next route (hosted
  *      mode only) — server-side fetch, no CORS, no third-party dependency.
- *   2. Jina Reader (https://r.jina.ai) — best quality, returns clean markdown. Has free-tier rate
- *      limits; users can add a paid Jina key in Settings for higher quotas.
- *   3. AllOrigins (https://api.allorigins.win) — free CORS proxy returning raw HTML; we strip it
- *      down in-browser. No key, no rate limit, but messier output.
- *   4. If all fail, we return a clear error and the UI offers a manual paste box.
+ *   2. If that fails, we return a clear error and the UI offers a manual paste box.
+ *      (Autism & Me Ad Studio removed the Jina and AllOrigins third-party readers.)
  *
  * Runs 100% in the user's browser when local. In hosted mode, /api/ingest
  * does a server-side HTTP GET to bypass CORS — that's the only network call
@@ -16,10 +13,6 @@
  */
 import { isHostedMode } from "./env";
 import { getSyncOrigin, resolveSyncOrigin, candidateSyncOrigins } from "./sync-endpoint";
-// Read through settings rather than straight out of localStorage: the optional
-// key vault stores this encrypted, and a raw read would hand the ciphertext to
-// Jina as a bearer token.
-import { getJinaKey } from "./settings";
 export interface IngestMetadata {
   title?: string;
   description?: string;
@@ -37,7 +30,7 @@ export interface IngestResult {
   /** Which reader produced this content. "manual" = user pasted it — keeping
    *  it distinct matters because the whole diagnostic story (and the "which
    *  reader is failing" error message) is built on this field. */
-  source: "jina" | "allorigins" | "sidecar" | "manual";
+  source: "sidecar" | "manual";
   metadata?: IngestMetadata;
 }
 export interface IngestError {
@@ -74,7 +67,7 @@ function serverProxyUrl(target: string): string {
 }
 
 /**
- * Server-side fetch — bypasses Jina quotas + browser CORS sandbox. In local
+ * Server-side fetch — bypasses the browser CORS sandbox. In local
  * mode this is the sidecar on its resolved loopback port; in hosted mode it's the
  * /api/ingest Next route. Most reliable path when external readers are
  * rate-limited or the user's network blocks them.
@@ -104,7 +97,7 @@ async function trySidecar(target: string, signal?: AbortSignal): Promise<IngestO
           ok: false,
           recoverable: true,
           message:
-            "Sidecar is outdated (missing /ingest endpoint). Click 🧹 Clean rebuild in the launcher, OR close & relaunch via OpenAdKit.bat / OpenAdKit.command, to pick up new code.",
+            "Sidecar is outdated (missing /ingest endpoint). Click 🧹 Clean rebuild in the launcher, OR close & relaunch via Ad Studio.bat / Ad Studio.command, to pick up new code.",
         };
       }
     }
@@ -145,33 +138,6 @@ function candidateOriginsLabel(): string {
   return candidateSyncOrigins().join(" or ");
 }
 
-async function tryJina(target: string, signal?: AbortSignal): Promise<IngestOutcome> {
-  const headers: Record<string, string> = {
-    Accept: "text/plain",
-    "X-With-Generated-Alt": "true",
-  };
-  const key = getJinaKey();
-  if (key) headers["Authorization"] = `Bearer ${key}`;
-  try {
-    const res = await fetch(`https://r.jina.ai/${target}`, { method: "GET", headers, signal });
-    if (!res.ok) {
-      return {
-        ok: false,
-        recoverable: true,
-        message: `Jina Reader returned ${res.status}.${res.status === 401 || res.status === 429 ? " Free-tier rate limit. Trying fallback…" : ""}`,
-      };
-    }
-    const text = await res.text();
-    if (!text || text.length < 50) {
-      return { ok: false, recoverable: true, message: "Jina returned almost no content. Trying fallback…" };
-    }
-    const trimmed = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
-    return { ok: true, url: target, content: trimmed, truncated: text.length > MAX_CHARS, source: "jina" };
-  } catch (e: any) {
-    if (e?.name === "AbortError") return { ok: false, recoverable: false, message: "Cancelled." };
-    return { ok: false, recoverable: true, message: `Jina network error. Trying fallback…` };
-  }
-}
 
 function stripHtml(html: string): string {
   if (typeof window === "undefined") return html;
@@ -198,28 +164,6 @@ function stripHtml(html: string): string {
   }
 }
 
-async function tryAllOrigins(target: string, signal?: AbortSignal): Promise<IngestOutcome> {
-  try {
-    const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
-    const res = await fetch(proxy, { method: "GET", signal });
-    if (!res.ok) {
-      return { ok: false, recoverable: true, message: `AllOrigins returned ${res.status}.` };
-    }
-    const html = await res.text();
-    if (!html || html.length < 100) {
-      return { ok: false, recoverable: true, message: "AllOrigins returned almost no content." };
-    }
-    const text = stripHtml(html);
-    if (!text || text.length < 200) {
-      return { ok: false, recoverable: true, message: "Page content too thin to extract — paste manually instead." };
-    }
-    const trimmed = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
-    return { ok: true, url: target, content: trimmed, truncated: text.length > MAX_CHARS, source: "allorigins" };
-  } catch (e: any) {
-    if (e?.name === "AbortError") return { ok: false, recoverable: false, message: "Cancelled." };
-    return { ok: false, recoverable: true, message: "AllOrigins unreachable from this browser." };
-  }
-}
 
 /** Debug helper — every reader attempt logs to the browser console with a
  *  consistent prefix. Open DevTools (F12) → Console tab to watch the ingest
@@ -244,16 +188,15 @@ export async function ingestUrl(rawUrl: string, signal?: AbortSignal): Promise<I
   }
 
   dbg("ingest:target-normalized", { target });
+  if (/(^|\.)jina\.ai$/i.test(new URL(target).hostname)) {
+    return {
+      ok: false,
+      recoverable: true,
+      message: "Web search is switched off in Ad Studio. Open the page you want in a new tab, copy its text and paste it into the box below.",
+    };
+  }
 
-  // Strategy (most-reliable first):
-  //   1. Local sidecar — no CORS, no quota, no third-party dependency.
-  //      Works for both regular URLs AND Jina search URLs (s.jina.ai/<query>).
-  //      Previously we skipped sidecar for Jina-search, but that left users
-  //      with no fallback when the browser hit Jina's 401 + AllOrigins was
-  //      adblocker-blocked. Sidecar can fetch s.jina.ai server-side fine —
-  //      bypasses both CORS and adblockers.
-  //   2. Jina Reader — best HTML→markdown extraction, occasional rate limits
-  //   3. AllOrigins — last-resort CORS proxy when both above fail
+  // Strategy: our own server-side reader only.
   const errors: string[] = [];
 
   dbg("ingest:try-sidecar");
@@ -262,17 +205,9 @@ export async function ingestUrl(rawUrl: string, signal?: AbortSignal): Promise<I
   if (sidecar.ok) return sidecar;
   errors.push(`Sidecar — ${sidecar.message}`);
 
-  dbg("ingest:try-jina");
-  const jina = await tryJina(target, signal);
-  dbg("ingest:jina-result", jina);
-  if (jina.ok) return jina;
-  errors.push(`Jina — ${jina.message}`);
-
-  dbg("ingest:try-allorigins");
-  const ao = await tryAllOrigins(target, signal);
-  dbg("ingest:allorigins-result", ao);
-  if (ao.ok) return ao;
-  errors.push(`AllOrigins — ${ao.message}`);
+  // Autism & Me Ad Studio: no third-party readers (Jina, AllOrigins). Pages
+  // are read only by this app's own server route, so nothing about what is
+  // being researched is sent to an outside proxy.
 
   dbg("ingest:all-failed", { errors });
 
@@ -283,7 +218,7 @@ export async function ingestUrl(rawUrl: string, signal?: AbortSignal): Promise<I
     ok: false,
     recoverable: true,
     message:
-      `Couldn't reach the URL via any reader. Each one returned:\n\n` +
+      `Couldn't read that page. The reader returned:\n\n` +
       errors.map((e) => `  • ${e}`).join("\n") +
       `\n\nFix: open ${target} in a new tab, select all (Ctrl+A / ⌘A), copy (Ctrl+C / ⌘C), and paste into the box below.`,
   };

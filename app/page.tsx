@@ -90,7 +90,7 @@ export default function Dashboard() {
       <FeatureTour />
       <PageHeader
         scope="dashboard"
-        title="OpenAdKit — open source AI marketing tool"
+        title="Ad Studio — open source AI marketing tool"
         subtitle="Every ad platform, every AI provider (BYOK), runs in your browser. Everything you generate stays on this device."
       />
 
@@ -102,9 +102,9 @@ export default function Dashboard() {
         <div className="mb-6 border border-live/40 bg-live/[0.04] p-6 grid md:grid-cols-[1fr_auto] items-center gap-4 animate-fade-up">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-ui-mega text-live mb-1">step 1 of 1</div>
-            <h2 className="font-display italic text-2xl text-ink leading-tight">Add your first client to unlock everything.</h2>
+            <h2 className="font-display font-semibold text-2xl text-ink leading-tight">Add your first client to unlock everything.</h2>
             <p className="text-sm text-ink-muted mt-2 leading-relaxed max-w-xl">
-              OpenAdKit's brand brain is what makes every output sound like <em>this</em> client — not generic AI copy. Paste a website URL and the AI auto-extracts the niche, products, platforms, content pillars, and tone in ~10 seconds.
+              Ad Studio's brand brain is what makes every output sound like <em>this</em> client — not generic AI copy. Paste a website URL and the AI auto-extracts the niche, products, platforms, content pillars, and tone in ~10 seconds.
             </p>
           </div>
           <Link
@@ -135,7 +135,7 @@ export default function Dashboard() {
                 <span className="text-[12px] text-ink-faint group-hover:text-live transition">↗</span>
               </div>
               <div>
-                <div className={`font-display italic text-xl leading-tight ${t.accent ? "text-live" : "text-ink"}`}>
+                <div className={`font-display font-semibold text-xl leading-tight ${t.accent ? "text-live" : "text-ink"}`}>
                   {t.label}
                 </div>
                 <p className="text-[13px] text-ink-muted mt-2 leading-relaxed">{t.sub}</p>

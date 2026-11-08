@@ -3,7 +3,7 @@
 // live so stale responses never leak.
 // VERSION is rewritten by scripts/sw-stamp.cjs at build time to the current git
 // SHA so each deploy invalidates the previous shell cache. (Audit finding #38.)
-const VERSION = "openadkit-1dc52a2";
+const VERSION = "openadkit-22786a9";
 const SHELL = ["/", "/setup", "/manifest.webmanifest"];
 
 // Any GET request whose hostname includes one of these strings is left
@@ -21,8 +21,6 @@ const NEVER_INTERCEPT_HOSTS = [
   "mistral.ai",
   "openrouter.ai",
   // URL ingest / read fallback
-  "jina.ai",               // r.jina.ai (Reader) + s.jina.ai (Search)
-  "allorigins.win",        // CORS proxy fallback for ingest
 ];
 
 self.addEventListener("install", (event) => {

@@ -56,7 +56,7 @@ function LeadFormOutput({ json }: { json: any }) {
     <div className="space-y-4 stagger">
       {json?.intro ? (
         <Section title="Intro" actions={<CopyButton text={`${json.intro.headline}\n\n${json.intro.greeting}`} />}>
-          <p className="font-display italic text-xl text-ink leading-tight">{json.intro.headline}</p>
+          <p className="font-display font-semibold text-xl text-ink leading-tight">{json.intro.headline}</p>
           <p className="text-sm text-ink-muted mt-2 whitespace-pre-line">{json.intro.greeting}</p>
         </Section>
       ) : null}
@@ -85,7 +85,7 @@ function LeadFormOutput({ json }: { json: any }) {
 
       {json?.thank_you_screen ? (
         <Section title="Thank-you screen">
-          <p className="font-display italic text-lg text-ink leading-tight">{json.thank_you_screen.headline}</p>
+          <p className="font-display font-semibold text-lg text-ink leading-tight">{json.thank_you_screen.headline}</p>
           <p className="text-sm text-ink-muted mt-2">{json.thank_you_screen.body}</p>
           <div className="mt-3 flex items-center gap-2">
             <Pill text={json.thank_you_screen.next_cta_text} tone="live" label="cta" />

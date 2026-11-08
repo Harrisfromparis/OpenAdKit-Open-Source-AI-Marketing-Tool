@@ -168,7 +168,7 @@ function HistoryInner() {
     const md = filtered.map((a) =>
       `## ${a.title}\n\n- **Platform**: ${a.platform} · ${a.campaign_type}\n- **Status**: ${a.status}${a.starred ? " · ⭐" : ""}\n- **When**: ${new Date(num(a.created_at)).toLocaleString()}\n- **Model**: \`${a.model_id}\` · in ${num(a.usage_input_tokens)} · out ${num(a.usage_output_tokens)} · $${num(a.cost_usd).toFixed(4)}\n${a.notes ? `- **Notes**: ${a.notes}\n` : ""}\n\`\`\`\n${a.output_text}\n\`\`\`\n`
     ).join("\n---\n\n");
-    download(`ados-history-${Date.now()}.md`, `# OpenAdKit History Export\n\nGenerated ${new Date().toISOString()} · ${filtered.length} entries\n\n${md}`, "text/markdown");
+    download(`ados-history-${Date.now()}.md`, `# Ad Studio History Export\n\nGenerated ${new Date().toISOString()} · ${filtered.length} entries\n\n${md}`, "text/markdown");
   }
 
   async function setStatusOn(id: string, s: GeneratedAd["status"]) {
@@ -335,7 +335,7 @@ function HistoryInner() {
         ads.length === 0 ? (
           <div className="border border-live/30 bg-live/[0.03] p-6 text-center">
             <div className="text-[10px] font-mono uppercase tracking-ui-mega text-live mb-2">empty history</div>
-            <h3 className="font-display italic text-xl text-ink leading-tight mb-2">Nothing generated yet.</h3>
+            <h3 className="font-display font-semibold text-xl text-ink leading-tight mb-2">Nothing generated yet.</h3>
             <p className="text-sm text-ink-muted max-w-md mx-auto leading-relaxed mb-4">
               Every ad you generate gets saved here automatically — local-only, never sent off-device. Start with the wizard or pick a tool from the sidebar.
             </p>

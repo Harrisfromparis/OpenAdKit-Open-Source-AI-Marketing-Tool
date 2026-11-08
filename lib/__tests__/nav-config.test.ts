@@ -97,7 +97,8 @@ describe("nav-config: hygiene", () => {
     // Twelve expanded groups pushed everything useful below the fold.
     // Sidebar.tsx still auto-expands the group holding the current route.
     const open = NAV_GROUPS.filter((g) => g.defaultOpen).map((g) => g.title);
-    expect(open, "no group should be open by default").toEqual([]);
+    // Autism & Me: only the house group (Ad Check and the Meta tools) starts open.
+    expect(open, "only the Autism & Me group should be open by default").toEqual(["Autism & Me"]);
   });
 
   it("has no empty groups", () => {

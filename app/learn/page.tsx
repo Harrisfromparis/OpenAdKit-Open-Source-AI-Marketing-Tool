@@ -48,7 +48,7 @@ function Inner() {
               </span>
               <span className="text-[10px] font-mono text-ink-faint group-hover:text-live transition">→</span>
             </div>
-            <h3 className="font-display italic text-lg text-ink leading-tight">{c.name}</h3>
+            <h3 className="font-display font-semibold text-lg text-ink leading-tight">{c.name}</h3>
             <p className="text-xs text-ink-muted mt-2 leading-relaxed">{c.blurb}</p>
           </Link>
         ))}

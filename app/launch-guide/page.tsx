@@ -63,12 +63,12 @@ function GuideOutput({ json }: { json: any }) {
           <div className="flex items-center gap-4">
             <div>
               <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">launch time</div>
-              <div className="font-display italic text-3xl text-live tabular">~{json.estimated_time_minutes} min</div>
+              <div className="font-display font-semibold text-3xl text-live tabular">~{json.estimated_time_minutes} min</div>
             </div>
             {json?.estimated_launch_cost_first_week_usd ? (
               <div>
                 <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">est. first-week cost</div>
-                <div className="font-display italic text-3xl text-pos tabular">${json.estimated_launch_cost_first_week_usd}</div>
+                <div className="font-display font-semibold text-3xl text-pos tabular">${json.estimated_launch_cost_first_week_usd}</div>
               </div>
             ) : null}
           </div>
@@ -98,7 +98,7 @@ function GuideOutput({ json }: { json: any }) {
             {s.steps?.map((step: any) => (
               <li key={step.step_number} className="border border-base-700 bg-base-900/30 p-3 text-sm">
                 <div className="flex items-start gap-3">
-                  <span className="font-display italic text-xl text-live tabular leading-none mt-0.5">{step.step_number}</span>
+                  <span className="font-display font-semibold text-xl text-live tabular leading-none mt-0.5">{step.step_number}</span>
                   <div className="flex-1">
                     <div className="text-ink font-medium">{step.action}</div>
                     {step.recommended_value ? (

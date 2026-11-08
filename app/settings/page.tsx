@@ -515,20 +515,6 @@ function SettingsInner() {
                 on={persistSyncKeys}
               />
             ) : null}
-            <div className="pt-3 border-t border-base-700">
-              <label className="label">jina reader api key (optional)</label>
-              <input
-                className="input-base font-mono text-xs"
-                value={jina}
-                onChange={(e) => persistJina(e.target.value)}
-                placeholder="jina_... — leave blank to use the free tier"
-                spellCheck={false}
-                autoComplete="off"
-              />
-              <p className="text-[11px] text-ink-muted mt-1.5">
-                OpenAdKit uses Jina Reader to pull a website's content when you add a brand by URL. The free tier hits ~20 req/min limits and may 401 on bursts; paid keys lift that. Get one at <a href="https://jina.ai/reader" target="_blank" rel="noreferrer" className="text-info hover:underline">jina.ai/reader</a>. AllOrigins is used as a free fallback automatically.
-              </p>
-            </div>
           </section>
 
           <section className="border border-base-600 bg-base-900/40 p-5 space-y-4">
@@ -716,7 +702,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   return (
     <div className="border border-base-600 bg-base-900/30 p-3">
       <div className="text-[9px] font-mono uppercase tracking-ui-mega text-ink-faint">{label}</div>
-      <div className={`mt-1 font-display italic text-2xl tabular ${accent ? "text-live" : "text-ink"}`}>{value}</div>
+      <div className={`mt-1 font-display font-semibold text-2xl tabular ${accent ? "text-live" : "text-ink"}`}>{value}</div>
     </div>
   );
 }

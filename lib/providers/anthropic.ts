@@ -20,7 +20,7 @@ function rejectsSamplingParams(model: string): boolean {
 }
 
 /** Models where thinking is adaptive-by-default (Claude Opus 5) or opt-in.
- *  OpenAdKit generates short structured copy with `max_tokens` in the 2.5k–6k
+ *  Ad Studio generates short structured copy with `max_tokens` in the 2.5k–6k
  *  range, and `max_tokens` caps thinking + response text *together* — leaving
  *  adaptive thinking on would truncate the actual output mid-JSON. We disable
  *  it explicitly, which Opus 5 accepts at the default `high` effort. */
@@ -30,7 +30,7 @@ function supportsThinkingToggle(model: string): boolean {
 
 /** Build the `system` field. When caching is requested and the prompt is long
  *  enough to actually cache (the API silently no-ops below ~512-1024 tokens),
- *  emit the block form with a cache_control breakpoint. OpenAdKit's system
+ *  emit the block form with a cache_control breakpoint. Ad Studio's system
  *  prompt is the brand brain + framework stack — stable across every call for
  *  a given brand, so it's an ideal cache prefix. */
 function buildSystem(opts: LLMCallOptions) {
@@ -58,7 +58,7 @@ function buildBody(opts: LLMCallOptions, stream: boolean) {
   return body;
 }
 
-/** Translate OpenAdKit's neutral LLMMessage[] into Anthropic's wire format,
+/** Translate Ad Studio's neutral LLMMessage[] into Anthropic's wire format,
  *  handling both plain text and multimodal (text + image) content. */
 function toAnthropicMessages(messages: LLMMessage[]) {
   return messages.map((m) => {
@@ -193,7 +193,7 @@ export const anthropic: Provider = {
   id: "anthropic",
   name: "Anthropic Claude",
   category: "paid",
-  description: "The model OpenAdKit was originally built for. Strongest at long-context reasoning + safety. No free tier; pay-per-use.",
+  description: "The model Ad Studio was originally built for. Strongest at long-context reasoning + safety. No free tier; pay-per-use.",
   get_key_url: "https://console.anthropic.com/settings/keys",
   default_model: "claude-sonnet-5",
   supports_vision: true,

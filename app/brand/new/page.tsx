@@ -316,10 +316,7 @@ function Inner() {
       dlog("[openadkit:brand-extract] deterministic fill:", deterministic);
       dlog("[openadkit:brand-extract] raw metadata:", r.metadata);
       const sourceLabel = `${r.url} (via ${
-        r.source === "sidecar" ? "local sidecar" :
-        r.source === "allorigins" ? "AllOrigins fallback" :
-        r.source === "manual" ? "manual paste" :
-        "Jina Reader"
+        r.source === "manual" ? "manual paste" : "Ad Studio reader"
       })`;
       setQuickStatus("④ Asking AI to fill the inference-heavy fields (tone, audience, pain points, products)…");
       const res = await llmCall({
@@ -715,7 +712,7 @@ function Inner() {
               <span className="text-[12px] font-semibold uppercase tracking-wider text-live">Method 1 · paste the client's website URL</span>
             </div>
             <p className="text-[12px] text-ink-muted mb-2 leading-relaxed">
-              Best when the brand has a public site. OpenAdKit reads the page via Jina Reader and extracts the brand brain.
+              Best when the brand has a public site. Ad Studio reads the page with its own reader and fills in the brand brain.
             </p>
             <div className="flex flex-wrap gap-2">
               <input
@@ -758,7 +755,7 @@ function Inner() {
               </div>
             ) : (
               <p className="text-[11px] font-mono uppercase tracking-ui-wide text-ink-subtle mt-2">
-                tries jina reader → allorigins fallback · facebook/instagram block scrapers (use method 2 or 3 instead)
+                read by Ad Studio's own server · Facebook and Instagram pages block readers, so paste their text instead
               </p>
             )}
 
@@ -804,35 +801,7 @@ function Inner() {
             )}
           </div>
 
-          {/* Method 2: Google search */}
-          <div className="border border-info/30 bg-info/[0.04] p-4 mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Search size={14} className="text-info" />
-              <span className="text-[12px] font-semibold uppercase tracking-wider text-info">Method 2 · search Google by business name</span>
-            </div>
-            <p className="text-[12px] text-ink-muted mb-2 leading-relaxed">
-              Use this when the client has no website, or when the site blocks scrapers (most Instagram and Facebook profiles). OpenAdKit runs a Google search via Jina, then extracts from the top results.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <input
-                className="input-base flex-1 min-w-[240px]"
-                placeholder='e.g. "Acme Tax bookkeeping software for freelancers"'
-                value={googleQuery}
-                onChange={(e) => setGoogleQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") quickAddFromGoogle(); }}
-                disabled={quickBusy}
-              />
-              <button onClick={quickAddFromGoogle} disabled={quickBusy || !googleQuery.trim()} className="btn-primary">
-                {quickBusy ? <Loader2 size={11} className="animate-spin" /> : <Search size={11} />}
-                {quickBusy ? "searching" : "search & extract"}
-              </button>
-              {quickBusy ? (
-                <button onClick={stopExtraction} className="btn-ghost" title="Cancel">
-                  <StopCircle size={11} /> stop
-                </button>
-              ) : null}
-            </div>
-          </div>
+          {/* Method 2 (Google search via Jina) removed in the Autism & Me Ad Studio: no third-party search proxy. */}
 
           {/* Method 2.5 — vision: drop a homepage screenshot */}
           <div className="border border-info/20 bg-info/[0.03] p-4 mb-4">
@@ -870,7 +839,7 @@ function Inner() {
               <span className="text-[12px] font-semibold uppercase tracking-wider text-ink-muted">Method 3 · start from an industry template</span>
             </div>
             <p className="text-[12px] text-ink-muted mb-3 leading-relaxed">
-              No website, no Google footprint, or just want a starting skeleton? Pick the closest industry — OpenAdKit pre-fills typical audience, tone, and positioning that you can refine.
+              No website, no Google footprint, or just want a starting skeleton? Pick the closest industry — Ad Studio pre-fills typical audience, tone, and positioning that you can refine.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               {INDUSTRY_TEMPLATES.map((t) => (
@@ -960,15 +929,15 @@ function ExtractionReview({
   return (
     <div className="border-2 border-live bg-live/[0.04] p-5 mb-6 animate-fade-up">
       <div className="flex items-start gap-3 mb-4">
-        <div className="shrink-0 h-8 w-8 grid place-items-center bg-live text-base-950 font-bold rounded-sm">2</div>
+        <div className="shrink-0 h-8 w-8 grid place-items-center bg-live text-black font-bold rounded-sm">2</div>
         <div className="flex-1">
-          <h2 className="font-display italic text-2xl text-ink leading-tight">Cross-check the AI extraction</h2>
+          <h2 className="font-display font-semibold text-2xl text-ink leading-tight">Cross-check the AI extraction</h2>
           <p className="text-sm text-ink-muted mt-1 leading-relaxed">
             Source: <span className="text-ink font-mono text-[12px]">{sourceLabel}</span>. Review every field below — fix anything wrong before it becomes the brand voice for every future generation.
           </p>
         </div>
         <div className="text-right shrink-0">
-          <div className="font-display italic text-3xl text-live tabular leading-none">{totalFilled}/{totalCount}</div>
+          <div className="font-display font-semibold text-3xl text-live tabular leading-none">{totalFilled}/{totalCount}</div>
           <div className="text-[10px] font-mono uppercase tracking-ui-wide text-ink-faint">fields filled</div>
         </div>
       </div>

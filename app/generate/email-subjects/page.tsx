@@ -80,11 +80,11 @@ function EmailOutput({ json }: { json: any }) {
         <div className="grid md:grid-cols-2 gap-2 text-sm">
           <div className="border border-base-700 p-2">
             <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">first send</div>
-            <div className="text-live font-display italic text-xl mt-1">{json?.best_for_first_send}</div>
+            <div className="text-live font-display font-semibold text-xl mt-1">{json?.best_for_first_send}</div>
           </div>
           <div className="border border-base-700 p-2">
             <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint">resend non-openers</div>
-            <div className="text-live font-display italic text-xl mt-1">{json?.best_for_resend_to_non_openers}</div>
+            <div className="text-live font-display font-semibold text-xl mt-1">{json?.best_for_resend_to_non_openers}</div>
           </div>
         </div>
         {json?.best_for_segments?.length ? (

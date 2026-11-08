@@ -9,40 +9,53 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Autism & Me brand kit 1.1, dark mode: dark-teal ground #05222B, cream
+      // text, orange for the one call to action (black text on it), deep
+      // orange, dusty blue, sage and terracotta for states.
       colors: {
         base: {
-          DEFAULT: "#08080a",
-          950: "#0a0a0d",
-          900: "#101013",
-          800: "#16161b",
-          700: "#1c1c22",
-          600: "#222229",
-          500: "#2a2a32",
+          DEFAULT: "#05222B",
+          950: "#041C24",
+          900: "#072A35",
+          800: "#0A3340",
+          700: "#0D3C4A",
+          600: "#164B5B",
+          500: "#1E5B6D",
         },
         ink: {
-          DEFAULT: "#e7e7ea",
-          muted: "#9a9aa3",
-          subtle: "#6b6b74",
-          faint: "#3f3f47",
+          DEFAULT: "#F8F5EF",
+          muted: "#C9D7DB",
+          subtle: "#9DB4BB",
+          faint: "#5E7E87",
         },
         live: {
-          DEFAULT: "#ffb020",
-          dim: "#a87016",
+          DEFAULT: "#F2863D",
+          dim: "#B7510C",
         },
         pos: {
-          DEFAULT: "#5fdb9b",
+          DEFAULT: "#A9C9A4",
         },
         neg: {
-          DEFAULT: "#ff5470",
+          DEFAULT: "#E9A38A",
         },
         info: {
-          DEFAULT: "#7aa2ff",
+          DEFAULT: "#8FAECA",
+        },
+        brand: {
+          teal: "#074151",
+          orange: "#F2863D",
+          deeporange: "#B7510C",
+          dusty: "#8FAECA",
+          mint: "#E9F4F6",
+          sage: "#9CAF9C",
+          terracotta: "#C97B5A",
+          cream: "#F8F5EF",
         },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "Georgia", "serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        display: ["var(--font-display)", "Poppins", "Arial", "sans-serif"],
+        mono: ["var(--font-mono)", "Poppins", "Arial", "sans-serif"],
       },
       letterSpacing: {
         "ui-tight": "-0.005em",

@@ -201,7 +201,7 @@ function Step({ n, title, desc, done, children }: { n: number; title: string; de
     <div className={`border ${done ? "border-base-700 bg-base-900/20" : "border-live/40 bg-live/5"} p-5`}>
       <div className="flex items-center gap-3 mb-3">
         <span className={`font-mono tabular text-[10px] uppercase tracking-ui-mega ${done ? "text-ink-faint" : "text-live"}`}>step {n}</span>
-        <h3 className="font-display italic text-xl text-ink">{title}</h3>
+        <h3 className="font-display font-semibold text-xl text-ink">{title}</h3>
         {done ? <span className="text-[10px] font-mono uppercase tracking-ui-mega text-pos ml-auto">✓</span> : null}
       </div>
       {desc ? <p className="text-xs text-ink-muted mb-3">{desc}</p> : null}
@@ -229,9 +229,9 @@ function Result({ result, reset }: { result: any; reset: () => void }) {
         <Pill text="recommendation" tone="live" />
         <button onClick={reset} className="ml-auto btn-ghost text-[10px]">start over</button>
       </div>
-      <div className="font-display italic text-3xl text-live leading-tight">{result.primary}</div>
+      <div className="font-display font-semibold text-3xl text-live leading-tight">{result.primary}</div>
       {result.secondary ? (
-        <div className="font-display italic text-lg text-ink leading-tight mt-1">+ {result.secondary}</div>
+        <div className="font-display font-semibold text-lg text-ink leading-tight mt-1">+ {result.secondary}</div>
       ) : null}
       <p className="text-sm text-ink-muted mt-3 leading-relaxed">{result.why}</p>
 
@@ -247,7 +247,7 @@ function Result({ result, reset }: { result: any; reset: () => void }) {
       </div>
 
       <div className="mt-4 pt-4 border-t border-base-700">
-        <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-2">your workflow in OpenAdKit</div>
+        <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-2">your workflow in Ad Studio</div>
         <div className="flex flex-wrap gap-2">
           {result.kit.map((href: string, i: number) => (
             <Link key={i} href={href} className="btn-primary">

@@ -49,7 +49,7 @@ function CompareOutput({ json }: { json: any }) {
     <div className="space-y-4 stagger">
       <Section title="Winner">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="font-display italic text-6xl text-live leading-none">
+          <div className="font-display font-semibold text-6xl text-live leading-none">
             {json?.winner === "tie" ? "Tie" : `Ad ${json?.winner}`}
           </div>
           <p className="text-sm text-ink-muted leading-relaxed max-w-2xl flex-1 min-w-[200px]">{json?.winner_reason}</p>
@@ -103,7 +103,7 @@ function CompareOutput({ json }: { json: any }) {
 
       {json?.hybrid_proposal ? (
         <Section title="Hybrid — take the best of both" actions={<CopyButton text={`${json.hybrid_proposal.headline_or_hook}\n\n${json.hybrid_proposal.body}\n\n${json.hybrid_proposal.cta}`} />}>
-          <div className="font-display italic text-2xl text-live leading-tight">{json.hybrid_proposal.headline_or_hook}</div>
+          <div className="font-display font-semibold text-2xl text-live leading-tight">{json.hybrid_proposal.headline_or_hook}</div>
           <p className="text-sm text-ink mt-3 whitespace-pre-line">{json.hybrid_proposal.body}</p>
           <Pill text={json.hybrid_proposal.cta} tone="live" label="cta" />
           <p className="text-[11px] text-ink-muted mt-3 border-t border-base-700 pt-2 italic">{json.hybrid_proposal.explanation}</p>

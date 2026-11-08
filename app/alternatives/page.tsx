@@ -14,12 +14,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "OpenAdKit vs Jasper, AdCreative, Anyword, Copy.ai — Free Alternatives Compared",
+  title: "Ad Studio vs Jasper, AdCreative, Anyword, Copy.ai — Free Alternatives Compared",
   description:
-    "Side-by-side comparison: OpenAdKit is the free MIT-licensed open-source alternative to Jasper ($39–59/mo), AdCreative ($39–249/mo), Anyword ($49–499/mo), Copy.ai ($49/mo). 18 AI ad generators, 9 LLM providers (BYOK), browser-only.",
+    "Side-by-side comparison: Ad Studio is the free MIT-licensed open-source alternative to Jasper ($39–59/mo), AdCreative ($39–249/mo), Anyword ($49–499/mo), Copy.ai ($49/mo). 18 AI ad generators, 9 LLM providers (BYOK), browser-only.",
   alternates: { canonical: "/alternatives" },
   openGraph: {
-    title: "OpenAdKit vs Jasper, AdCreative, Anyword, Copy.ai — Free Alternatives",
+    title: "Ad Studio vs Jasper, AdCreative, Anyword, Copy.ai — Free Alternatives",
     description:
       "Free open-source alternative to the $49–499/mo AI marketing stack. 18 ad generators across every platform. BYOK, browser-only, MIT-licensed.",
     type: "article",
@@ -54,7 +54,7 @@ const COMPETITORS: Competitor[] = [
       "Word/credit caps that surprise users at month-end",
     ],
     whyOpenAdKit:
-      "OpenAdKit covers the same ad-copy surfaces plus 11 dedicated optimizers (creative score, CTR, ad fatigue, quality score) that Jasper doesn't have. BYOK across 9 providers means you can match Jasper's output quality (Claude / GPT-4) at $0 marginal cost beyond your own API spend.",
+      "Ad Studio covers the same ad-copy surfaces plus 11 dedicated optimizers (creative score, CTR, ad fatigue, quality score) that Jasper doesn't have. BYOK across 9 providers means you can match Jasper's output quality (Claude / GPT-4) at $0 marginal cost beyond your own API spend.",
   },
   {
     slug: "adcreative",
@@ -62,7 +62,7 @@ const COMPETITORS: Competitor[] = [
     tagline: "AI-generated ad creatives with 'conversion probability' scoring.",
     pricing: "$39–$249+/month. Trial only.",
     whatTheyDoWell: [
-      "Visual ad-creative generation (banners, video) — OpenAdKit does NOT do this in-app",
+      "Visual ad-creative generation (banners, video) — Ad Studio does NOT do this in-app",
       "Conversion-score predictions tied to historic ad-platform data",
       "Built-in Meta + Google Ads connections for direct push",
     ],
@@ -72,7 +72,7 @@ const COMPETITORS: Competitor[] = [
       "Closed-source, no BYOK — locked to their LLM choices and pricing",
     ],
     whyOpenAdKit:
-      "OpenAdKit beats AdCreative on copy generation breadth (18 generators vs ~6 in their copy module) and on optimizer count. For images/video, OpenAdKit returns ready-to-paste prompts for Midjourney / DALL-E / Runway / Pika plus a directory of free + paid tools per use case — you keep choice and don't get locked into their model.",
+      "Ad Studio beats AdCreative on copy generation breadth (18 generators vs ~6 in their copy module) and on optimizer count. For images/video, Ad Studio returns ready-to-paste prompts for Midjourney / DALL-E / Runway / Pika plus a directory of free + paid tools per use case — you keep choice and don't get locked into their model.",
   },
   {
     slug: "anyword",
@@ -90,7 +90,7 @@ const COMPETITORS: Competitor[] = [
       "Single-LLM lock-in, no BYOK",
     ],
     whyOpenAdKit:
-      "OpenAdKit's Creative Score optimizer covers similar scoring ground (5-lever score + named fixes + predicted CTR band) without the per-seat fee. Anyword's brand-voice training maps to OpenAdKit's Brand Brain (auto-extracted from any URL — no manual setup needed).",
+      "Ad Studio's Creative Score optimizer covers similar scoring ground (5-lever score + named fixes + predicted CTR band) without the per-seat fee. Anyword's brand-voice training maps to Ad Studio's Brand Brain (auto-extracted from any URL — no manual setup needed).",
   },
   {
     slug: "copy-ai",
@@ -108,7 +108,7 @@ const COMPETITORS: Competitor[] = [
       "Generic ad-copy templates, no platform-specific format constraints",
     ],
     whyOpenAdKit:
-      "OpenAdKit has no word/credit caps because you pay your LLM provider directly (free tiers available on Groq, Gemini, Cerebras, OpenRouter). The Launch Wizard handles the same multi-step orchestration Copy.ai charges $249/mo for, and the 18 generators each include platform-specific format enforcement Copy.ai's generic templates don't.",
+      "Ad Studio has no word/credit caps because you pay your LLM provider directly (free tiers available on Groq, Gemini, Cerebras, OpenRouter). The Launch Wizard handles the same multi-step orchestration Copy.ai charges $249/mo for, and the 18 generators each include platform-specific format enforcement Copy.ai's generic templates don't.",
   },
   {
     slug: "pencil",
@@ -124,7 +124,7 @@ const COMPETITORS: Competitor[] = [
       "Closed-source, vendor lock-in on brand assets and historical performance data",
     ],
     whyOpenAdKit:
-      "OpenAdKit is the right tool for the solo and SMB segment Pencil left behind when it pivoted. Same copy + optimizer breadth, $0 instead of $119+/mo, MIT-licensed so your work and brand data stay yours forever.",
+      "Ad Studio is the right tool for the solo and SMB segment Pencil left behind when it pivoted. Same copy + optimizer breadth, $0 instead of $119+/mo, MIT-licensed so your work and brand data stay yours forever.",
   },
 ];
 
@@ -132,11 +132,11 @@ export default function AlternativesPage() {
   return (
     <article className="max-w-4xl mx-auto py-8 space-y-8">
       <header className="space-y-3">
-        <h1 className="font-display italic text-5xl text-ink leading-tight">
-          OpenAdKit vs Jasper, AdCreative, Anyword, Copy.ai
+        <h1 className="font-display font-semibold text-5xl text-ink leading-tight">
+          Ad Studio vs Jasper, AdCreative, Anyword, Copy.ai
         </h1>
         <p className="text-lg text-ink-muted leading-relaxed">
-          A side-by-side look at how OpenAdKit — the free, open-source, BYOK AI marketing tool — compares
+          A side-by-side look at how Ad Studio — the free, open-source, BYOK AI marketing tool — compares
           to the leading paid alternatives. Skip to the comparison you care about, or read all five.
         </p>
         <nav className="flex flex-wrap gap-2 pt-2" aria-label="Jump to comparison">
@@ -157,7 +157,7 @@ export default function AlternativesPage() {
           The 30-second version
         </h2>
         <p className="text-base text-ink leading-relaxed">
-          OpenAdKit replaces a <strong>$49–$499/month stack</strong> of paid AI marketing tools with
+          Ad Studio replaces a <strong>$49–$499/month stack</strong> of paid AI marketing tools with
           <strong> one MIT-licensed app that runs entirely in your browser</strong>. Bring your own AI key
           (Claude, GPT, Gemini, Groq, Cerebras, OpenRouter, Together, DeepSeek, or Mistral — free tiers
           available on four of those), and get 18 ad generators, 11 optimizers, multi-client brand
@@ -180,7 +180,7 @@ export default function AlternativesPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-display italic text-3xl text-ink">What you actually get — screenshots</h2>
+        <h2 className="font-display font-semibold text-3xl text-ink">What you actually get — screenshots</h2>
         <p className="text-sm text-ink-muted">
           Real production UI, not mockups. Same browser app whether you self-host or use the hosted
           deploy.
@@ -190,7 +190,7 @@ export default function AlternativesPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/screenshots/08-cockpit-dashboard.png"
-              alt="OpenAdKit dashboard cockpit showing 18 AI ad generators and 11 optimizers organized by ad platform"
+              alt="Ad Studio dashboard cockpit showing 18 AI ad generators and 11 optimizers organized by ad platform"
               loading="lazy"
               width={1600}
               height={1000}
@@ -204,7 +204,7 @@ export default function AlternativesPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/screenshots/09-settings-providers.png"
-              alt="OpenAdKit settings showing all 9 supported AI providers — Claude, GPT, Gemini, Groq, Cerebras, OpenRouter, Together AI, DeepSeek, Mistral — with BYOK API key fields"
+              alt="Ad Studio settings showing all 9 supported AI providers — Claude, GPT, Gemini, Groq, Cerebras, OpenRouter, Together AI, DeepSeek, Mistral — with BYOK API key fields"
               loading="lazy"
               width={1600}
               height={1000}
@@ -218,7 +218,7 @@ export default function AlternativesPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/screenshots/10-generator-meta-ads.png"
-              alt="OpenAdKit Meta Ads generator producing 3 angle-distinct Facebook and Instagram ad copy variants with character count validation"
+              alt="Ad Studio Meta Ads generator producing 3 angle-distinct Facebook and Instagram ad copy variants with character count validation"
               loading="lazy"
               width={1600}
               height={1000}
@@ -232,7 +232,7 @@ export default function AlternativesPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/screenshots/11-optimizer-creative-score.png"
-              alt="OpenAdKit Creative Score optimizer with 5-lever scoring rubric and named-phrase fixes for paid social and search ads"
+              alt="Ad Studio Creative Score optimizer with 5-lever scoring rubric and named-phrase fixes for paid social and search ads"
               loading="lazy"
               width={1600}
               height={1000}
@@ -246,7 +246,7 @@ export default function AlternativesPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/screenshots/12-research-competitors.png"
-              alt="OpenAdKit competitor research linking to Meta Ads Library, Google Ads Transparency, TikTok Top Ads, and LinkedIn Ad Library"
+              alt="Ad Studio competitor research linking to Meta Ads Library, Google Ads Transparency, TikTok Top Ads, and LinkedIn Ad Library"
               loading="lazy"
               width={1600}
               height={1000}
@@ -260,7 +260,7 @@ export default function AlternativesPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/screenshots/06-learn-frameworks-trainer.png"
-              alt="OpenAdKit ad copywriting framework trainer covering PAS, AIDA, BAB, 4 U's, and Schwartz awareness ladder"
+              alt="Ad Studio ad copywriting framework trainer covering PAS, AIDA, BAB, 4 U's, and Schwartz awareness ladder"
               loading="lazy"
               width={1600}
               height={1000}
@@ -276,8 +276,8 @@ export default function AlternativesPage() {
       {COMPETITORS.map((c) => (
         <section key={c.slug} id={`vs-${c.slug}`} className="space-y-4 scroll-mt-16">
           <header className="space-y-1 border-b border-base-700 pb-3">
-            <h2 className="font-display italic text-3xl text-ink">
-              OpenAdKit vs {c.name}
+            <h2 className="font-display font-semibold text-3xl text-ink">
+              Ad Studio vs {c.name}
             </h2>
             <p className="text-sm text-ink-muted">{c.tagline}</p>
             <p className="text-[11px] font-mono uppercase tracking-ui-wide text-ink-faint">
@@ -317,7 +317,7 @@ export default function AlternativesPage() {
 
           <div className="border border-live/40 bg-live/[0.04] p-4 space-y-2">
             <h3 className="text-[11px] font-mono uppercase tracking-ui-wide text-live">
-              Why pick OpenAdKit over {c.name}
+              Why pick Ad Studio over {c.name}
             </h3>
             <p className="text-sm text-ink leading-relaxed">{c.whyOpenAdKit}</p>
           </div>
@@ -325,11 +325,11 @@ export default function AlternativesPage() {
       ))}
 
       <section className="border-t border-base-700 pt-6 space-y-4">
-        <h2 className="font-display italic text-3xl text-ink">Frequently asked</h2>
+        <h2 className="font-display font-semibold text-3xl text-ink">Frequently asked</h2>
         <div className="space-y-4">
           <div>
             <h3 className="text-base font-medium text-ink mb-1">
-              Is OpenAdKit really free, or is it freemium?
+              Is Ad Studio really free, or is it freemium?
             </h3>
             <p className="text-sm text-ink-muted leading-relaxed">
               Truly free. $0/month forever. MIT-licensed. The only cost is whatever you spend with
@@ -342,17 +342,17 @@ export default function AlternativesPage() {
               What's the catch? How do you make money?
             </h3>
             <p className="text-sm text-ink-muted leading-relaxed">
-              There's no business model. OpenAdKit is open-source under MIT, built by Dicecodes
+              There's no business model. Ad Studio is open-source under MIT, built by Dicecodes
               as a free tool for the marketing community. No upsells, no premium tier, no paid
               add-ons. The code is on GitHub — you can audit, fork, modify, self-host.
             </p>
           </div>
           <div>
             <h3 className="text-base font-medium text-ink mb-1">
-              Can I switch from {COMPETITORS.map((c) => c.name).join(" / ")} to OpenAdKit easily?
+              Can I switch from {COMPETITORS.map((c) => c.name).join(" / ")} to Ad Studio easily?
             </h3>
             <p className="text-sm text-ink-muted leading-relaxed">
-              Yes. There's nothing to import — OpenAdKit's Brand Brain extracts everything it needs
+              Yes. There's nothing to import — Ad Studio's Brand Brain extracts everything it needs
               from your website URL in one click. Paste your brand site, get a populated brand
               profile, start generating. Total switching time is usually 5–10 minutes.
             </p>
@@ -364,7 +364,7 @@ export default function AlternativesPage() {
             <p className="text-sm text-ink-muted leading-relaxed">
               100% in your own browser (IndexedDB) and, when running locally, in a{" "}
               <code className="text-[11px] bg-base-900 px-1 py-0.5">data/snapshot.json</code> file
-              inside the OpenAdKit folder. No accounts, no cloud sync, no telemetry. Your AI API
+              inside the Ad Studio folder. No accounts, no cloud sync, no telemetry. Your AI API
               keys never leave the browser — every LLM call goes from your browser directly to the
               provider.
             </p>

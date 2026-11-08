@@ -56,7 +56,7 @@ export interface LLMCallOptions {
   signal?: AbortSignal;
   /**
    * Ask the provider to cache the system prompt when it supports prefix
-   * caching. OpenAdKit sends the same ~1.1k-token framework stack + full brand
+   * caching. Ad Studio sends the same ~1.1k-token framework stack + full brand
    * brain as the system prompt on every generation, so a cache hit is ~90%
    * cheaper on that prefix. Providers that don't support it ignore the flag.
    *
@@ -195,7 +195,7 @@ export function classifyKeyCheckError(err: unknown, providerName: string, modelI
   }
   if (status === 404) {
     // Our catalog names a model this provider no longer serves. Not the user's fault.
-    return { ok: false, authenticated: true, status, modelId, message: `Key looks valid, but ${providerName} doesn't recognise the model "${modelId}". That's an OpenAdKit catalog problem, not your key — saved anyway. Try another model.` };
+    return { ok: false, authenticated: true, status, modelId, message: `Key looks valid, but ${providerName} doesn't recognise the model "${modelId}". That's an Ad Studio catalog problem, not your key — saved anyway. Try another model.` };
   }
   if (status && status >= 500) {
     return { ok: false, authenticated: true, status, modelId, message: `${providerName} returned a server error (${status}). Nothing wrong with your key — saved. Try again shortly.` };

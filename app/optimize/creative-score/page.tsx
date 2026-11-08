@@ -65,7 +65,7 @@ function ScoreOutput({ json }: { json: any }) {
         <div className="flex items-center gap-6 flex-wrap">
           <div>
             <div className="text-[11px] uppercase tracking-wider text-ink-muted mb-1">Overall</div>
-            <div className={`font-display italic text-6xl tabular ${overallColor} leading-none`}>{overall.toFixed(1)}<span className="text-ink-subtle text-3xl">/10</span></div>
+            <div className={`font-display font-semibold text-6xl tabular ${overallColor} leading-none`}>{overall.toFixed(1)}<span className="text-ink-subtle text-3xl">/10</span></div>
           </div>
           <div>
             <Pill text={json?.tier ?? "—"} tone={tierTone[tier] ?? "default"} />
@@ -99,7 +99,7 @@ function ScoreOutput({ json }: { json: any }) {
             {json.top_3_fixes.map((f: any, i: number) => (
               <li key={i} className="border border-base-700 p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="font-display italic text-2xl text-live tabular leading-none">{i + 1}</span>
+                  <span className="font-display font-semibold text-2xl text-live tabular leading-none">{i + 1}</span>
                   <Pill text={f.lever?.replace(/_/g, " ")} tone="live" />
                   <span className="text-[11px] text-pos uppercase tracking-wider ml-auto">{f.expected_lift}</span>
                 </div>

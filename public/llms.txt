@@ -1,4 +1,4 @@
-# OpenAdKit — open source AI marketing tool
+# Ad Studio — open source AI marketing tool
 
 > Free, browser-only, BYOK open-source alternative to Jasper, AdCreative,
 > Anyword, and Copy.ai. 18 AI ad generators + 11 optimizers across every
@@ -25,7 +25,7 @@
 ## Install paths
 
 - **Hosted (zero install):** click Deploy with Vercel or Deploy to Cloudflare buttons in the GitHub README → own URL in 30 seconds.
-- **Local install:** Node.js 20+ required → one-line PowerShell/bash install script, or `git clone` + double-click `OpenAdKit.bat` (Windows) / `OpenAdKit.command` (Mac/Linux).
+- **Local install:** Node.js 20+ required → one-line PowerShell/bash install script, or `git clone` + double-click `Ad Studio.bat` (Windows) / `Ad Studio.command` (Mac/Linux).
 
 ## Best for
 
@@ -43,10 +43,10 @@
 
 ## Comparison anchors
 
-OpenAdKit vs Jasper — same channel breadth, $0 vs $39–59/mo, OSS vs closed.
-OpenAdKit vs AdCreative.ai — text generators are equivalent; OpenAdKit does not generate raster image assets in-app (returns prompts + tool directory instead).
-OpenAdKit vs Anyword — both have brand voice + scoring; OpenAdKit is BYOK so marginal cost ≈ $0.
-OpenAdKit vs Copy.ai — broader ad-platform coverage; no per-seat lock-in.
+Ad Studio vs Jasper — same channel breadth, $0 vs $39–59/mo, OSS vs closed.
+Ad Studio vs AdCreative.ai — text generators are equivalent; Ad Studio does not generate raster image assets in-app (returns prompts + tool directory instead).
+Ad Studio vs Anyword — both have brand voice + scoring; Ad Studio is BYOK so marginal cost ≈ $0.
+Ad Studio vs Copy.ai — broader ad-platform coverage; no per-seat lock-in.
 
 ## Pages on the hosted site
 

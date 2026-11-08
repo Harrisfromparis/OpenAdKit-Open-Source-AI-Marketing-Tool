@@ -45,7 +45,7 @@ function ShoppingOutput({ json }: { json: any }) {
           <CharBadge count={json?.title?.chars ?? 0} max={SHOPPING_LIMITS.title} />
           <Pill text={json?.title?.status?.replace(/_/g, " ")} tone={json?.title?.status === "ok" ? "pos" : json?.title?.status === "over" ? "neg" : "live"} />
         </div>
-        <p className="font-display italic text-xl text-ink leading-snug">{json?.title?.text}</p>
+        <p className="font-display font-semibold text-xl text-ink leading-snug">{json?.title?.text}</p>
       </Section>
 
       <Section title="Optimized description" actions={<CopyButton text={json?.description?.text ?? ""} />}>

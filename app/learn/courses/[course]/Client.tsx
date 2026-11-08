@@ -38,7 +38,7 @@ function Inner({ courseSlug }: { courseSlug: string }) {
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="font-display italic text-lg text-ink leading-tight">{l.title}</div>
+                <div className="font-display font-semibold text-lg text-ink leading-tight">{l.title}</div>
                 <p className="text-[11px] text-ink-muted mt-1.5">{l.takeaway}</p>
               </div>
               <span className="text-[10px] font-mono uppercase tracking-ui-mega text-live shrink-0">

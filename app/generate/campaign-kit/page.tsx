@@ -38,7 +38,7 @@ function KitOutput({ json }: { json: any }) {
   return (
     <div className="space-y-4 stagger">
       <Section title="Master hook">
-        <div className="font-display italic text-2xl text-live leading-tight">{json?.master_hook}</div>
+        <div className="font-display font-semibold text-2xl text-live leading-tight">{json?.master_hook}</div>
         <p className="text-sm text-ink-muted mt-3">{json?.master_usp}</p>
       </Section>
 
@@ -99,7 +99,7 @@ function KitOutput({ json }: { json: any }) {
 
       {json?.landing_hero ? (
         <Section title="Landing hero">
-          <p className="font-display italic text-xl text-ink leading-tight">{json.landing_hero.h1}</p>
+          <p className="font-display font-semibold text-xl text-ink leading-tight">{json.landing_hero.h1}</p>
           <p className="text-sm text-ink-muted mt-1">{json.landing_hero.subhead}</p>
           <ul className="list-disc list-inside text-sm text-ink mt-3 space-y-0.5">
             {json.landing_hero.bullets?.map((b: string, i: number) => <li key={i}>{b}</li>)}

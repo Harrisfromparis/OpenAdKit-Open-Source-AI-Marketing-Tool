@@ -93,7 +93,7 @@ function TeardownOutput({ json }: { json: any }) {
             <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
               {Object.entries(fm).map(([k, v]: any) => (
                 <div key={k} className="border border-base-700 px-2 py-1.5 text-center">
-                  <div className="font-display italic text-lg text-live tabular">{v}%</div>
+                  <div className="font-display font-semibold text-lg text-live tabular">{v}%</div>
                   <div className="text-[10px] font-mono uppercase tracking-ui-wide text-ink-faint">{k.replace(/_/g, " ")}</div>
                 </div>
               ))}
@@ -155,7 +155,7 @@ function TeardownOutput({ json }: { json: any }) {
                 <div className="space-y-2">
                   <div>
                     <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">hook</div>
-                    <p className="font-display italic text-lg text-live leading-tight">{b.hook}</p>
+                    <p className="font-display font-semibold text-lg text-live leading-tight">{b.hook}</p>
                   </div>
                   <div>
                     <div className="text-[10px] font-mono uppercase tracking-ui-mega text-ink-faint mb-1">visual</div>
