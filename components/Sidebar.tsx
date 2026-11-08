@@ -239,7 +239,7 @@ export function Sidebar() {
           </>
         ) : (
           <Link
-            href="/brand/new"
+            href="/brand"
             className="flex items-center gap-2.5 group p-1.5 rounded-sm border border-live/40 bg-live/[0.04] hover:bg-live/10 transition-colors"
           >
             <div className="shrink-0 h-7 w-7 grid place-items-center bg-base-900 border border-live/40 rounded-sm">
@@ -247,7 +247,7 @@ export function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[9px] font-mono uppercase tracking-ui-mega text-live leading-none">no client yet</div>
-              <div className="text-[12px] text-ink leading-tight mt-0.5">Add your first client →</div>
+              <div className="text-[12px] text-ink leading-tight mt-0.5">Add the Autism &amp; Me profile →</div>
             </div>
           </Link>
         )}

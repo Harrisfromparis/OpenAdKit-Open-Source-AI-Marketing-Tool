@@ -108,11 +108,11 @@ export default function Dashboard() {
             </p>
           </div>
           <Link
-            href="/brand/new"
+            href="/brand"
             className="btn-primary whitespace-nowrap text-base"
           >
             <Brain size={14} />
-            Create first client
+            Add the Autism &amp; Me profile
           </Link>
         </div>
       ) : null}
